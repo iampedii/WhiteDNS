@@ -33,6 +33,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import shop.whitedns.client.MainActivity
 import shop.whitedns.client.R
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsScanState
 import shop.whitedns.client.model.WhiteDnsScanStatus
@@ -146,8 +147,9 @@ class WhiteDnsScanService : Service() {
         initialCompletedResolvers: Int,
         requestedTotalResolvers: Int,
     ) = coroutineScope {
-        val binaryFile = binaryInstaller.installExecutable()
-        val scanRoot = File(File(applicationContext.noBackupFilesDir, "stormdns/scan"), sessionId).apply {
+        val engine = DnsClientEngine.normalize(serverProfile.engine)
+        val binaryFile = binaryInstaller.installExecutable(engine)
+        val scanRoot = File(File(applicationContext.noBackupFilesDir, "$engine/scan"), sessionId).apply {
             mkdirs()
         }
         val validResolvers = WhiteDnsScannerResultStore.normalizeResolverEntries(initialValidResolvers)

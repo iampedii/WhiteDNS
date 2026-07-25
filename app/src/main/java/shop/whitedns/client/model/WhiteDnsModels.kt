@@ -14,12 +14,29 @@ data class Choice<T>(
     val label: String,
 )
 
+object DnsClientEngine {
+    const val StormDns = "stormdns"
+    const val CottenDns = "cottendns"
+
+    fun normalize(value: String): String {
+        return when (value.trim().lowercase()) {
+            "cotten", "cotton", "cottendns", "cottondns" -> CottenDns
+            else -> StormDns
+        }
+    }
+
+    fun displayName(value: String): String {
+        return if (normalize(value) == CottenDns) "CottenDNS" else "StormDNS"
+    }
+}
+
 data class StormDnsServerProfile(
     val id: String,
     val label: String,
     val domain: String,
     val encryptionKey: String,
     val encryptionMethod: Int,
+    val engine: String = DnsClientEngine.StormDns,
 )
 
 data class ConnectionProfile(
@@ -31,6 +48,7 @@ data class ConnectionProfile(
     val customServerEncryptionMethod: Int = 1,
     val resolverProfileId: String = "",
     val connectionMode: String = "proxy",
+    val engine: String = DnsClientEngine.StormDns,
 ) : Serializable {
     companion object {
         const val DefaultId = "default"
@@ -53,6 +71,7 @@ data class ConnectionProfile(
                 customServerEncryptionMethod = settings.customServerEncryptionMethod,
                 resolverProfileId = settings.selectedResolverProfileId,
                 connectionMode = settings.connectionMode,
+                engine = DnsClientEngine.StormDns,
             )
         }
     }
@@ -657,6 +676,7 @@ fun WhiteDnsSettings.normalizedConnectionProfiles(): List<ConnectionProfile> {
                     "proxy", "vpn" -> profile.connectionMode
                     else -> "proxy"
                 },
+                engine = DnsClientEngine.normalize(profile.engine),
             )
         }
 
@@ -935,6 +955,7 @@ fun WhiteDnsSettings.upsertConnectionProfile(profile: ConnectionProfile): WhiteD
             "proxy", "vpn" -> profile.connectionMode
             else -> "proxy"
         },
+        engine = DnsClientEngine.normalize(profile.engine),
     )
     val profiles = normalizedConnectionProfiles()
     val updatedProfiles = if (profiles.any { it.id == normalizedProfile.id }) {
@@ -1256,13 +1277,18 @@ private fun <T> List<T>.moved(fromIndex: Int, toIndex: Int): List<T> {
 private data class ConnectionServerKey(
     val domain: String,
     val encryptionKey: String,
+    val engine: String,
 )
 
 private fun ConnectionProfile.duplicateServerKey(): ConnectionServerKey? {
     val domain = customServerDomain.trim().trimEnd('.').lowercase()
     val encryptionKey = customServerEncryptionKey.trim()
     return if (domain.isNotBlank() && encryptionKey.isNotBlank()) {
-        ConnectionServerKey(domain = domain, encryptionKey = encryptionKey)
+        ConnectionServerKey(
+            domain = domain,
+            encryptionKey = encryptionKey,
+            engine = DnsClientEngine.normalize(engine),
+        )
     } else {
         null
     }

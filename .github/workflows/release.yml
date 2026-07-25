@@ -55,12 +55,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: third_party/StormDNS/go.mod
-          cache-dependency-path: third_party/StormDNS/go.sum
+          cache-dependency-path: |
+            third_party/StormDNS/go.sum
+            third_party/CottenDns/go.sum
 
-      - name: Build StormDNS native clients
+      - name: Build DNS native clients
         run: |
           set -euo pipefail
-          make stormdns \
+          make stormdns cottendns \
             NDK_HOST=linux-x86_64 \
             NDK_ROOT="${ANDROID_HOME}/ndk/${STORMDNS_ANDROID_NDK_VERSION}"
 

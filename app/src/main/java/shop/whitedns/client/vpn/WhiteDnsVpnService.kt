@@ -32,6 +32,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import shop.whitedns.client.MainActivity
 import shop.whitedns.client.R
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolvedWhiteDnsSettings
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsOptions
@@ -82,7 +83,7 @@ class WhiteDnsVpnService : VpnService() {
             }
             else -> {
                 try {
-                    enterForeground("Preparing StormDNS")
+                    enterForeground("Preparing WhiteDNS")
                     startVpn(intent)
                     START_REDELIVER_INTENT
                 } catch (error: Exception) {
@@ -221,7 +222,7 @@ class WhiteDnsVpnService : VpnService() {
                     sessionId = sessionId,
                     message = "Starting full-device VPN",
                 )
-                logInfo("Using custom StormDNS server")
+                logInfo("Using custom ${DnsClientEngine.displayName(serverProfile.engine)} server")
                 logInfo("Starting internal SOCKS bridge")
                 startStormDnsAndVpn(sessionId, serverProfile, settings, resolvedSettings)
             } catch (error: CancellationException) {
@@ -261,12 +262,12 @@ class WhiteDnsVpnService : VpnService() {
     ) {
         while (true) {
             startupFailure()?.let { failure ->
-                throw IllegalStateException("StormDNS startup failed: $failure")
+                throw IllegalStateException("DNS engine startup failed: $failure")
             }
             if (!stormDnsProcessManager.isRunning()) {
                 val exitCode = stormDnsProcessManager.exitCodeOrNull()
                 throw IllegalStateException(
-                    "StormDNS process exited before SOCKS was ready${exitCode?.let { " (exit code $it)" }.orEmpty()}",
+                    "DNS engine process exited before SOCKS was ready${exitCode?.let { " (exit code $it)" }.orEmpty()}",
                 )
             }
             if (canConnectToLocalPort(listenPort)) {
@@ -311,7 +312,7 @@ class WhiteDnsVpnService : VpnService() {
             if (!stormDnsProcessManager.isRunning()) {
                 val exitCode = stormDnsProcessManager.exitCodeOrNull()
                 throw IllegalStateException(
-                    "StormDNS process exited while VPN was active${exitCode?.let { " (exit code $it)" }.orEmpty()}",
+                    "DNS engine process exited while VPN was active${exitCode?.let { " (exit code $it)" }.orEmpty()}",
                 )
             }
             delay(1_000)
@@ -419,7 +420,7 @@ class WhiteDnsVpnService : VpnService() {
         runCatching {
             stormDnsProcessManager.stop()
         }.onFailure { error ->
-            Log.w(Tag, "Failed to stop StormDNS", error)
+            Log.w(Tag, "Failed to stop DNS engine", error)
         }
         WhiteDnsRuntimeStateStore.markStopped(
             context = applicationContext,
@@ -657,7 +658,7 @@ class WhiteDnsVpnService : VpnService() {
             val launchSettings = settings ?: WhiteDnsSettingsStore(context).load()
             val launchServerProfile = serverProfile
                 ?: selectServerProfile(launchSettings)
-                ?: throw IllegalStateException("No StormDNS server profile configured")
+                ?: throw IllegalStateException("No DNS server profile configured")
             RuntimeLaunchRequestStore.save(
                 context = context,
                 requestId = sessionId,
@@ -681,10 +682,11 @@ class WhiteDnsVpnService : VpnService() {
             }
             return StormDnsServerProfile(
                 id = "custom",
-                label = "Custom StormDNS Server",
+                label = "Custom ${DnsClientEngine.displayName(connectionProfile.engine)} Server",
                 domain = domain,
                 encryptionKey = encryptionKey,
                 encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
+                engine = connectionProfile.engine,
             )
         }
 

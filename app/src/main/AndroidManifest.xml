@@ -43,6 +43,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="stormdns" />
+                <data android:scheme="masterdns" />
+                <data android:scheme="cottendns" />
             </intent-filter>
         </activity>
 

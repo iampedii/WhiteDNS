@@ -339,6 +339,9 @@ class WhiteDnsSettingsStore(
                     customServerEncryptionMethod = item.optInt("customServerEncryptionMethod", 1),
                     resolverProfileId = item.optString("resolverProfileId"),
                     connectionMode = item.optString("connectionMode", "proxy"),
+                    engine = DnsClientEngine.normalize(
+                        item.optString("engine", DnsClientEngine.StormDns),
+                    ),
                 )
             }
                 .filter { it.id.isNotBlank() }
@@ -358,7 +361,8 @@ class WhiteDnsSettingsStore(
                     .put("customServerEncryptionKey", profile.customServerEncryptionKey)
                     .put("customServerEncryptionMethod", profile.customServerEncryptionMethod)
                     .put("resolverProfileId", profile.resolverProfileId)
-                    .put("connectionMode", profile.connectionMode),
+                    .put("connectionMode", profile.connectionMode)
+                    .put("engine", DnsClientEngine.normalize(profile.engine)),
             )
         }
         return array.toString()

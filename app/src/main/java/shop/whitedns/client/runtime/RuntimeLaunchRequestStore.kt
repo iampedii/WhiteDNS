@@ -5,9 +5,11 @@ import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 import shop.whitedns.client.model.ConnectionProfile
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 import shop.whitedns.client.model.runtimeConnectionSettings
+import shop.whitedns.client.model.selectedConnectionProfile
 import shop.whitedns.client.model.syncSelectedConnectionProfileFields
 
 data class RuntimeLaunchRequest(
@@ -87,6 +89,7 @@ object RuntimeLaunchRequestStore {
             .put("domain", profile.domain)
             .put("encryptionKey", profile.encryptionKey)
             .put("encryptionMethod", profile.encryptionMethod)
+            .put("engine", DnsClientEngine.normalize(profile.engine))
     }
 
     private fun decodeServerProfile(json: JSONObject): StormDnsServerProfile {
@@ -96,6 +99,9 @@ object RuntimeLaunchRequestStore {
             domain = json.optString("domain"),
             encryptionKey = json.optString("encryptionKey"),
             encryptionMethod = json.optInt("encryptionMethod", 1),
+            engine = DnsClientEngine.normalize(
+                json.optString("engine", DnsClientEngine.StormDns),
+            ),
         )
     }
 
@@ -104,8 +110,10 @@ object RuntimeLaunchRequestStore {
         settings.splitTunnelPackages.forEach { packageName ->
             splitTunnelPackages.put(packageName)
         }
+        val engine = DnsClientEngine.normalize(settings.selectedConnectionProfile().engine)
         return JSONObject()
             .put("selectedConnectionProfileId", settings.selectedConnectionProfileId)
+            .put("engine", engine)
             .put("serverMode", settings.serverMode)
             .put("customServerDomain", settings.customServerDomain)
             .put("customServerEncryptionKey", settings.customServerEncryptionKey)
@@ -183,6 +191,9 @@ object RuntimeLaunchRequestStore {
                     customServerEncryptionKey = json.optString("customServerEncryptionKey"),
                     customServerEncryptionMethod = json.optInt("customServerEncryptionMethod", 1),
                     connectionMode = json.optString("connectionMode", "proxy"),
+                    engine = DnsClientEngine.normalize(
+                        json.optString("engine", DnsClientEngine.StormDns),
+                    ),
                 ),
             ),
             serverMode = json.optString("serverMode", "custom"),

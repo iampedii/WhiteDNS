@@ -772,7 +772,7 @@ class WhiteDnsModelsTest {
     }
 
     @Test
-    fun importStormDnsProfileLinkAcceptsRequiredPayloadOnly() {
+    fun importProfileLinkRoutesEngineByScheme() {
         val payload = """
             {
               "schema": "whitedns.profile",
@@ -798,7 +798,24 @@ class WhiteDnsModelsTest {
         assertEquals("server.example.com", importedProfile.customServerDomain)
         assertEquals("secret-key", importedProfile.customServerEncryptionKey)
         assertEquals(2, importedProfile.customServerEncryptionMethod)
+        assertEquals(DnsClientEngine.StormDns, importedProfile.engine)
         assertEquals("proxy", importedSettings.connectionMode)
+
+        val masterProfile = WhiteDnsSettings()
+            .importStormDnsProfileLink(
+                rawLink = link.replaceFirst("stormdns://", "masterdns://"),
+                nowMillis = 43L,
+            )
+            .selectedConnectionProfile()
+        assertEquals(DnsClientEngine.StormDns, masterProfile.engine)
+
+        val cottenProfile = WhiteDnsSettings()
+            .importStormDnsProfileLink(
+                rawLink = link.replaceFirst("stormdns://", "cottendns://"),
+                nowMillis = 44L,
+            )
+            .selectedConnectionProfile()
+        assertEquals(DnsClientEngine.CottenDns, cottenProfile.engine)
     }
 
     @Test

@@ -4,6 +4,8 @@ import java.util.Base64
 import org.json.JSONObject
 
 private const val StormDnsProfileScheme = "stormdns"
+private const val MasterDnsProfileScheme = "masterdns"
+private const val CottenDnsProfileScheme = "cottendns"
 private const val StormDnsProfileSchema = "whitedns.profile"
 private const val StormDnsProfileVersion = 1
 
@@ -64,7 +66,7 @@ fun WhiteDnsSettings.importStormDnsProfileLinks(
         }
         .toList()
     if (links.isEmpty()) {
-        throw IllegalArgumentException("Enter at least one stormdns:// profile link")
+        throw IllegalArgumentException("Enter at least one DNS profile link")
     }
 
     var nextSettings = this
@@ -85,7 +87,7 @@ fun WhiteDnsSettings.importStormDnsProfileLink(
     rawLink: String,
     nowMillis: Long = System.currentTimeMillis(),
 ): WhiteDnsSettings {
-    val root = decodeProfilePayload(rawLink)
+    val (root, engine) = decodeProfilePayload(rawLink)
     val schema = root.requiredString("schema")
     if (schema != StormDnsProfileSchema) {
         throw IllegalArgumentException("Unsupported profile schema")
@@ -123,6 +125,7 @@ fun WhiteDnsSettings.importStormDnsProfileLink(
         customServerEncryptionMethod = encryptionMethod,
         resolverProfileId = "",
         connectionMode = connectionMode,
+        engine = engine,
     )
 
     return copy(
@@ -141,18 +144,22 @@ private fun encodeProfilePayload(root: JSONObject): String {
         .encodeToString(root.toString().toByteArray(Charsets.UTF_8))
 }
 
-private fun decodeProfilePayload(rawLink: String): JSONObject {
+private fun decodeProfilePayload(rawLink: String): Pair<JSONObject, String> {
     val link = rawLink.trim()
-    val prefix = "$StormDnsProfileScheme://"
-    if (!link.startsWith(prefix)) {
-        throw IllegalArgumentException("Profile link must start with stormdns://")
+    val schemeEnd = link.indexOf("://")
+    val engine = when (link.take(schemeEnd.coerceAtLeast(0)).lowercase()) {
+        MasterDnsProfileScheme, StormDnsProfileScheme -> DnsClientEngine.StormDns
+        CottenDnsProfileScheme -> DnsClientEngine.CottenDns
+        else -> throw IllegalArgumentException(
+            "Profile link must start with masterdns://, stormdns://, or cottendns://",
+        )
     }
-    val payload = link.removePrefix(prefix).trim()
+    val payload = link.substring(schemeEnd + 3).trim()
     if (payload.isBlank()) {
         throw IllegalArgumentException("Profile link is empty")
     }
     val decoded = decodeBase64Payload(payload.substringBefore('#').substringBefore('?'))
-    return JSONObject(decoded)
+    return JSONObject(decoded) to engine
 }
 
 private fun decodeBase64Payload(payload: String): String {

@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import shop.whitedns.client.model.ConnectionProfile
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 import shop.whitedns.client.model.importAdvancedSettingsProfileFromToml
@@ -47,6 +48,29 @@ class StormDnsConfigRendererTest {
         assertTrue(toml.contains("UPLOAD_PACKET_DUPLICATION_COUNT = 4"))
         assertTrue(toml.contains("STATS_REPORT_INTERVAL_SECONDS = 1.0"))
         assertTrue(toml.contains("LOG_LEVEL = \"INFO\""))
+        assertFalse(toml.contains("LEGACY_SESSION_ID"))
+        assertFalse(toml.contains("FAST_CONNECT"))
+    }
+
+    @Test
+    fun renderClientTomlAddsCottenDnsDefaultsOnlyForCottenDnsProfiles() {
+        val connectionProfile = ConnectionProfile(
+            id = "cotten",
+            name = "CottenDNS",
+            customServerDomain = "cotten.example.com",
+            customServerEncryptionKey = "secret-key",
+            engine = DnsClientEngine.CottenDns,
+        )
+
+        val toml = StormDnsConfigRenderer.renderClientToml(
+            connectionProfile = connectionProfile,
+            settings = WhiteDnsSettings(connectionProfiles = listOf(connectionProfile)),
+        )
+
+        assertTrue(toml.contains("LEGACY_SESSION_ID = false"))
+        assertTrue(toml.contains("RESOLVER_TRANSPORT = \"auto\""))
+        assertTrue(toml.contains("""QUERY_TYPES = ["TXT"]"""))
+        assertTrue(toml.contains("FAST_CONNECT = true"))
     }
 
     @Test

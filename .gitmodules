@@ -2,3 +2,7 @@
 	path = third_party/StormDNS
 	url = https://github.com/iampedii/StormDNS.git
 	branch = feat/whitedns-android-client
+[submodule "third_party/CottenDns"]
+	path = third_party/CottenDns
+	url = https://github.com/WhiteDNS/CottenDns.git
+	branch = main

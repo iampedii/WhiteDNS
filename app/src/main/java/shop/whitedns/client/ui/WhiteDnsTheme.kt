@@ -349,6 +349,9 @@ object WhiteDnsL10n {
     val profileFieldName: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldName
     val profileFieldResolvers: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldResolvers
     val profileFieldProfileLinks: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldProfileLinks
+    val profileFieldEngine: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldEngine
+    val profileEngineStormDns: String @Composable get() = LocalWhiteDnsStrings.current.profileEngineStormDns
+    val profileEngineCottenDns: String @Composable get() = LocalWhiteDnsStrings.current.profileEngineCottenDns
     val profileFieldToml: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldToml
     val profileNamePlaceholderFastTunnel: String @Composable get() = LocalWhiteDnsStrings.current.profileNamePlaceholderFastTunnel
     val profileNamePlaceholderHomeResolvers: String @Composable get() = LocalWhiteDnsStrings.current.profileNamePlaceholderHomeResolvers

@@ -14,13 +14,13 @@ Official channel: [https://t.me/whitedns](https://t.me/whitedns)
 
 ## Credits
 
-WhiteDNS is backed by the [MasterDNS Client](https://github.com/masterking32/MasterDnsVPN) project and uses StormDNS, a fork from MasterDNS, from [nullroute1970/StormDNS](https://github.com/nullroute1970/StormDNS).
+WhiteDNS is backed by the [MasterDNS Client](https://github.com/masterking32/MasterDnsVPN) project and supports both [StormDNS](https://github.com/nullroute1970/StormDNS) and [CottenDns](https://github.com/WhiteDNS/CottenDns) client engines.
 
 The Android VPN path also packages `tun2proxy`; see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for third-party license details.
 
 ## Features
 
-- Android client for WhiteDNS / StormDNS based DNS tunneling.
+- Android client for WhiteDNS DNS tunneling with StormDNS and CottenDns engines.
 - Proxy mode with local SOCKS5 support and optional HTTP proxy bridge.
 - VPN mode using Android `VpnService` and packaged `tun2proxy` native libraries.
 - Built-in and custom server profile support.
@@ -48,13 +48,14 @@ The Android VPN path also packages `tun2proxy`; see [THIRD_PARTY_NOTICES.md](./T
 |       |   |   |-- storm/      # StormDNS config and process management
 |       |   |   |-- ui/         # Compose UI, theme, view model
 |       |   |   `-- vpn/        # Android VPN service and tun2proxy management
-|       |   |-- jniLibs/        # packaged native StormDNS and tun2proxy libraries
+|       |   |-- jniLibs/        # packaged native StormDNS, CottenDns, and tun2proxy libraries
 |       |   `-- res/            # app icons, strings, themes, XML resources
 |       |-- test/
 |       `-- androidTest/
 |-- gradle/
 |-- third_party/
-|   `-- StormDNS/       # pinned StormDNS source used for native client builds
+|   |-- StormDNS/       # pinned StormDNS source used for native client builds
+|   `-- CottenDns/      # pinned CottenDns source used for native client builds
 |-- build.gradle.kts
 |-- settings.gradle.kts
 `-- THIRD_PARTY_NOTICES.md
@@ -68,10 +69,10 @@ Requirements:
 
 - Android Studio or Android SDK command line tools.
 - JDK 17.
-- Go matching the version in `third_party/StormDNS/go.mod`.
+- Go matching the version in `third_party/StormDNS/go.mod` and `third_party/CottenDns/go.mod`.
 - Android SDK platform for `compileSdk = 36`.
 - Android NDK `26.3.11579264`.
-- Android NDK `29.0.14206865` for rebuilding the StormDNS native client.
+- Android NDK `29.0.14206865` for rebuilding the StormDNS and CottenDns native clients.
 
 Build and test a local debug copy:
 

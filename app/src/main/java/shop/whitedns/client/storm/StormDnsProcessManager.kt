@@ -6,6 +6,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 import kotlin.concurrent.thread
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 
@@ -30,11 +31,12 @@ class StormDnsProcessManager(
         serverProfile: StormDnsServerProfile,
         settings: WhiteDnsSettings,
     ): StormDnsLaunchSpec {
-        val runtimeDir = File(context.noBackupFilesDir, "stormdns/runtime").apply {
+        val engine = DnsClientEngine.normalize(serverProfile.engine)
+        val runtimeDir = File(context.noBackupFilesDir, "$engine/runtime").apply {
             mkdirs()
         }
         cleanupStaleLaunchFiles(runtimeDir)
-        val binaryFile = binaryInstaller.installExecutable()
+        val binaryFile = binaryInstaller.installExecutable(engine)
         val launchId = UUID.randomUUID().toString()
         val configFile = File(runtimeDir, ".wd-$launchId.toml")
         val resolversFile = File(runtimeDir, ".wd-$launchId.resolvers")
@@ -61,6 +63,7 @@ class StormDnsProcessManager(
         onOutput: (String) -> Unit = {},
     ): StormDnsLaunchSpec {
         stop()
+        val engineName = DnsClientEngine.displayName(serverProfile.engine)
         val launchSpec = prepareLaunch(serverProfile, settings)
         onOutput("Runtime prepared")
         try {
@@ -74,14 +77,14 @@ class StormDnsProcessManager(
                 .directory(launchSpec.workingDirectory)
                 .redirectErrorStream(true)
                 .start()
-            val drainThread = drainProcessOutput(startedProcess, onOutput)
+            val drainThread = drainProcessOutput(startedProcess, onOutput, serverProfile.engine)
             synchronized(processLock) {
                 currentLaunchSpec = launchSpec
                 process = startedProcess
                 outputDrainThread = drainThread
             }
             drainThread.start()
-            onOutput("StormDNS process started")
+            onOutput("$engineName process started")
         } catch (error: IOException) {
             cleanupLaunchFiles(launchSpec)
             throw error
@@ -171,9 +174,10 @@ class StormDnsProcessManager(
     private fun drainProcessOutput(
         process: Process,
         onOutput: (String) -> Unit,
+        engine: String,
     ): Thread {
         return thread(
-            name = "stormdns-output",
+            name = "${DnsClientEngine.normalize(engine)}-output",
             isDaemon = true,
             start = false,
         ) {

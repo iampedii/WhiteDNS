@@ -145,6 +145,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -160,6 +161,7 @@ import shop.whitedns.client.model.ConnectionStats
 import shop.whitedns.client.model.ConnectionStatus
 import shop.whitedns.client.model.ConnectionVerificationState
 import shop.whitedns.client.model.ConnectionVerificationStatus
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.ResolverRuntimeState
 import shop.whitedns.client.model.ServerTestResult
@@ -3794,7 +3796,7 @@ private fun ConnectionProfilesSettings(
             onDismiss = { showImportDialog = false },
             onImport = { links ->
                 runCatching {
-                    settings.importStormDnsProfileLinks(links)
+                    settings.importStormDnsProfileLinks(rawLinks = links)
                 }.onSuccess { importedSettings ->
                     onSettingsChange(importedSettings)
                     showImportDialog = false
@@ -4873,7 +4875,7 @@ private fun ConnectionProfileImportDialog(
                     profileLinks = it
                     importError = null
                 },
-                placeholder = "stormdns://...\nstormdns://...",
+                placeholder = "stormdns://...\ncottendns://...",
                 singleLine = false,
                 minLines = 5,
                 maxLines = 9,
@@ -5297,6 +5299,9 @@ private fun ConnectionProfileDialog(
     var encryptionMethod by remember(profile?.id) {
         mutableStateOf(profile?.customServerEncryptionMethod ?: 1)
     }
+    var engine by remember(profile?.id) {
+        mutableStateOf(DnsClientEngine.normalize(profile?.engine ?: DnsClientEngine.StormDns))
+    }
     val canSave = name.isNotBlank() && domain.isNotBlank() && encryptionKey.isNotBlank()
 
     Dialog(onDismissRequest = onDismiss) {
@@ -5318,6 +5323,14 @@ private fun ConnectionProfileDialog(
                 ),
             )
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
+            if (profile == null) {
+                WhiteDnsDropdownField(
+                    label = WhiteDnsL10n.profileFieldEngine,
+                    value = engine,
+                    options = localizedDnsClientEngines(),
+                    onValueChange = { engine = it },
+                )
+            }
             WhiteDnsTextField(
                 label = WhiteDnsL10n.profileFieldName,
                 value = name,
@@ -5370,6 +5383,7 @@ private fun ConnectionProfileDialog(
                                 customServerEncryptionMethod = encryptionMethod,
                                 resolverProfileId = profile?.resolverProfileId.orEmpty(),
                                 connectionMode = profile?.connectionMode ?: "proxy",
+                                engine = profile?.engine ?: engine,
                             ),
                         )
                     },
@@ -5431,12 +5445,13 @@ private fun ConnectionProfileRow(
     onDelete: () -> Unit,
 ) {
     val domain = profile.customServerDomain.ifBlank { WhiteDnsL10n.profileDomainFallback }
+    val engine = DnsClientEngine.displayName(profile.engine)
     val activeStatus = WhiteDnsL10n.profileStatusActive
     val selectedStatus = WhiteDnsL10n.profileStatusSelected
     val connectionSummary = when {
-        active -> "$domain - $activeStatus"
-        selected -> "$domain - $selectedStatus"
-        else -> domain
+        active -> "$engine · $domain - $activeStatus"
+        selected -> "$engine · $domain - $selectedStatus"
+        else -> "$engine · $domain"
     }
     val displayName = if (profile.id == ConnectionProfile.DefaultId) WhiteDnsL10n.setupDefaultConnection else profile.name
     val testRating = serverTestResult?.let { result ->
@@ -9515,6 +9530,12 @@ private fun localizedSplitTunnelModes(): List<Choice<String>> = listOf(
     Choice(WhiteDnsOptions.SplitTunnelModeOff, WhiteDnsL10n.splitTunnelAllAppsChoice),
     Choice(WhiteDnsOptions.SplitTunnelModeInclude, WhiteDnsL10n.splitTunnelOnlySelectedChoice),
     Choice(WhiteDnsOptions.SplitTunnelModeExclude, WhiteDnsL10n.splitTunnelBypassSelectedChoice),
+)
+
+@Composable
+private fun localizedDnsClientEngines(): List<Choice<String>> = listOf(
+    Choice(DnsClientEngine.StormDns, WhiteDnsL10n.profileEngineStormDns),
+    Choice(DnsClientEngine.CottenDns, WhiteDnsL10n.profileEngineCottenDns),
 )
 
 @Composable

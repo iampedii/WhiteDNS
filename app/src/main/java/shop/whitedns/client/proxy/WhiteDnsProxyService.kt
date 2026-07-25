@@ -28,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import shop.whitedns.client.MainActivity
 import shop.whitedns.client.R
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolvedWhiteDnsSettings
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
@@ -153,7 +154,7 @@ class WhiteDnsProxyService : Service() {
                         sessionId = sessionId,
                         message = "Starting local proxy",
                     )
-                    logInfo("Using custom StormDNS server")
+                    logInfo("Using custom ${DnsClientEngine.displayName(serverProfile.engine)} server")
                     logInfo("Starting SOCKS listener on ${resolvedSettings.listenIp}:${resolvedSettings.listenPort}")
                     if (resolvedSettings.localDnsEnabled) {
                         logInfo("Starting tunneled DNS listener on 127.0.0.1:${resolvedSettings.localDnsPort}")
@@ -190,7 +191,7 @@ class WhiteDnsProxyService : Service() {
                         return@launch
                     }
                     logWarning(
-                        "StormDNS stopped unexpectedly: ${error.message ?: error::class.java.simpleName}. " +
+                        "DNS engine stopped unexpectedly: ${error.message ?: error::class.java.simpleName}. " +
                             "Restarting in ${restartDelayMillis / 1_000}s",
                     )
                     delay(restartDelayMillis)
@@ -253,12 +254,12 @@ class WhiteDnsProxyService : Service() {
     ) {
         while (true) {
             startupFailure()?.let { failure ->
-                throw IllegalStateException("StormDNS startup failed: $failure")
+                throw IllegalStateException("DNS engine startup failed: $failure")
             }
             if (!stormDnsProcessManager.isRunning()) {
                 val exitCode = stormDnsProcessManager.exitCodeOrNull()
                 throw IllegalStateException(
-                    "StormDNS process exited before SOCKS was ready${exitCode?.let { " (exit code $it)" }.orEmpty()}",
+                    "DNS engine process exited before SOCKS was ready${exitCode?.let { " (exit code $it)" }.orEmpty()}",
                 )
             }
             if (canConnectToLocalPort(listenPort)) {
@@ -283,7 +284,7 @@ class WhiteDnsProxyService : Service() {
             if (!stormDnsProcessManager.isRunning()) {
                 val exitCode = stormDnsProcessManager.exitCodeOrNull()
                 throw IllegalStateException(
-                    "StormDNS process exited${exitCode?.let { " (exit code $it)" }.orEmpty()}",
+                    "DNS engine process exited${exitCode?.let { " (exit code $it)" }.orEmpty()}",
                 )
             }
             delay(1_000)
@@ -316,7 +317,7 @@ class WhiteDnsProxyService : Service() {
         runCatching {
             stormDnsProcessManager.stop()
         }.onFailure { error ->
-            Log.w(Tag, "Failed to stop StormDNS", error)
+            Log.w(Tag, "Failed to stop DNS engine", error)
         }
     }
 
@@ -530,7 +531,7 @@ class WhiteDnsProxyService : Service() {
             val launchSettings = settings ?: WhiteDnsSettingsStore(context).load()
             val launchServerProfile = serverProfile
                 ?: selectServerProfile(launchSettings)
-                ?: throw IllegalStateException("No StormDNS server profile configured")
+                ?: throw IllegalStateException("No DNS server profile configured")
             RuntimeLaunchRequestStore.save(
                 context = context,
                 requestId = sessionId,
@@ -554,10 +555,11 @@ class WhiteDnsProxyService : Service() {
             }
             return StormDnsServerProfile(
                 id = "custom",
-                label = "Custom StormDNS Server",
+                label = "Custom ${DnsClientEngine.displayName(connectionProfile.engine)} Server",
                 domain = domain,
                 encryptionKey = encryptionKey,
                 encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
+                engine = connectionProfile.engine,
             )
         }
 

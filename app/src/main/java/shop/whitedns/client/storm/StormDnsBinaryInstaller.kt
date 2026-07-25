@@ -2,27 +2,34 @@ package shop.whitedns.client.storm
 
 import android.content.Context
 import java.io.File
+import shop.whitedns.client.model.DnsClientEngine
 
 class StormDnsBinaryInstaller(
     private val context: Context,
 ) {
 
-    fun installExecutable(): File {
-        val executable = File(context.applicationInfo.nativeLibraryDir, NativeLibraryName)
+    fun installExecutable(engine: String = DnsClientEngine.StormDns): File {
+        val normalizedEngine = DnsClientEngine.normalize(engine)
+        val executable = File(
+            context.applicationInfo.nativeLibraryDir,
+            if (normalizedEngine == DnsClientEngine.CottenDns) CottenDnsNativeLibraryName else StormDnsNativeLibraryName,
+        )
+        val engineName = DnsClientEngine.displayName(normalizedEngine)
         if (!executable.exists()) {
             throw IllegalStateException(
-                "StormDNS native executable not found: ${executable.absolutePath}",
+                "$engineName native executable not found: ${executable.absolutePath}",
             )
         }
         if (!executable.canExecute()) {
             throw IllegalStateException(
-                "StormDNS native executable is not executable: ${executable.absolutePath}",
+                "$engineName native executable is not executable: ${executable.absolutePath}",
             )
         }
         return executable
     }
 
     companion object {
-        private const val NativeLibraryName = "libstormdns_client.so"
+        private const val StormDnsNativeLibraryName = "libstormdns_client.so"
+        private const val CottenDnsNativeLibraryName = "libcottendns_client.so"
     }
 }

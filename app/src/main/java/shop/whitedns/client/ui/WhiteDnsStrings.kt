@@ -215,6 +215,9 @@ interface WhiteDnsStrings {
     val profileFieldName: String
     val profileFieldResolvers: String
     val profileFieldProfileLinks: String
+    val profileFieldEngine: String
+    val profileEngineStormDns: String
+    val profileEngineCottenDns: String
     val profileFieldToml: String
     val profileNamePlaceholderFastTunnel: String
     val profileNamePlaceholderHomeResolvers: String
@@ -902,6 +905,9 @@ object EnglishStrings : WhiteDnsStrings {
     override val profileFieldName = "Name"
     override val profileFieldResolvers = "Resolvers"
     override val profileFieldProfileLinks = "Profile Links"
+    override val profileFieldEngine = "Client Engine"
+    override val profileEngineStormDns = "StormDNS"
+    override val profileEngineCottenDns = "CottenDNS"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "Fast Tunnel"
     override val profileNamePlaceholderHomeResolvers = "Home Resolvers"
@@ -1566,6 +1572,9 @@ object PersianStrings : WhiteDnsStrings {
     override val profileFieldName = "نام"
     override val profileFieldResolvers = "ریزالورها"
     override val profileFieldProfileLinks = "لینک‌های پروفایل"
+    override val profileFieldEngine = "موتور کلاینت"
+    override val profileEngineStormDns = "StormDNS"
+    override val profileEngineCottenDns = "CottenDNS"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "تونل سریع"
     override val profileNamePlaceholderHomeResolvers = "ریزالورهای خانه"

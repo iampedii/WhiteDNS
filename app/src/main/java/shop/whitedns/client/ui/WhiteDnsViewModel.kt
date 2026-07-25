@@ -44,6 +44,7 @@ import shop.whitedns.client.model.ConnectionStats
 import shop.whitedns.client.model.ConnectionStatus
 import shop.whitedns.client.model.ConnectionVerificationState
 import shop.whitedns.client.model.ConnectionVerificationStatus
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.ResolverRuntimeState
 import shop.whitedns.client.model.ServerTestResult
@@ -2501,6 +2502,7 @@ class WhiteDnsViewModel(
             domain = domain,
             encryptionKey = encryptionKey,
             encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
+            engine = DnsClientEngine.normalize(connectionProfile.engine),
         )
     }
 

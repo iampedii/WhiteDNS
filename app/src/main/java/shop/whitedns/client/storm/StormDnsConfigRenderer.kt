@@ -1,6 +1,7 @@
 package shop.whitedns.client.storm
 
 import shop.whitedns.client.model.ConnectionProfile
+import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolvedWhiteDnsSettings
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
@@ -42,6 +43,7 @@ object StormDnsConfigRenderer {
             appendLine("DATA_ENCRYPTION_METHOD = ${serverProfile.encryptionMethod}")
             appendLine("ENCRYPTION_KEY = \"${escape(serverProfile.encryptionKey)}\"")
             appendLine("PROTOCOL_TYPE = \"${escape(resolved.protocolType)}\"")
+            appendEngineSettingsToml(serverProfile.engine)
             appendClientSettingsToml(resolved)
         }.trimEnd()
     }
@@ -59,6 +61,7 @@ object StormDnsConfigRenderer {
             appendLine("DATA_ENCRYPTION_METHOD = ${serverProfile.encryptionMethod}")
             appendLine("ENCRYPTION_KEY = \"${escape(serverProfile.encryptionKey)}\"")
             appendLine("PROTOCOL_TYPE = \"${escape(resolved.protocolType)}\"")
+            appendEngineSettingsToml(serverProfile.engine)
             appendClientSettingsToml(
                 resolved = resolved,
                 listenIp = "127.0.0.1",
@@ -79,6 +82,16 @@ object StormDnsConfigRenderer {
 
     fun renderResolvers(settings: WhiteDnsSettings): String {
         return settings.resolve().resolverEntries.joinToString(separator = "\n")
+    }
+
+    private fun StringBuilder.appendEngineSettingsToml(engine: String) {
+        if (DnsClientEngine.normalize(engine) != DnsClientEngine.CottenDns) {
+            return
+        }
+        appendLine("LEGACY_SESSION_ID = false")
+        appendLine("RESOLVER_TRANSPORT = \"auto\"")
+        appendLine("""QUERY_TYPES = ["TXT"]""")
+        appendLine("FAST_CONNECT = true")
     }
 
     private fun StringBuilder.appendClientSettingsToml(
@@ -213,10 +226,11 @@ object StormDnsConfigRenderer {
         }
         return StormDnsServerProfile(
             id = id.ifBlank { "custom" },
-            label = name.ifBlank { "Custom StormDNS Server" },
+            label = name.ifBlank { "Custom ${DnsClientEngine.displayName(engine)} Server" },
             domain = domain,
             encryptionKey = encryptionKey,
             encryptionMethod = customServerEncryptionMethod.coerceIn(0, 5),
+            engine = DnsClientEngine.normalize(engine),
         )
     }
 }
