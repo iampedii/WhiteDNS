@@ -1,0 +1,97 @@
+name: Debug Build
+
+# Produces installable debug APKs for manual testing, and gives pull requests a
+# real compile — the release workflow only runs on tags, so nothing else here
+# builds a branch.
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_API: "26"
+  GRADLE_ANDROID_NDK_VERSION: "26.3.11579264"
+  STORMDNS_ANDROID_NDK_VERSION: "29.0.14206865"
+
+jobs:
+  debug:
+    name: Build debug APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout WhiteDNS
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          command -v sdkmanager
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;${GRADLE_ANDROID_NDK_VERSION}" \
+            "ndk;${STORMDNS_ANDROID_NDK_VERSION}"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: third_party/StormDNS/go.mod
+          cache-dependency-path: |
+            third_party/StormDNS/go.sum
+            third_party/CottenDns/go.sum
+
+      - name: Report pinned engine commits
+        run: |
+          set -euo pipefail
+          echo "StormDNS  $(git -C third_party/StormDNS rev-parse HEAD)"
+          echo "CottenDns $(git -C third_party/CottenDns rev-parse HEAD)"
+
+      - name: Build DNS native clients
+        run: |
+          set -euo pipefail
+          make stormdns cottendns \
+            NDK_HOST=linux-x86_64 \
+            NDK_ROOT="${ANDROID_HOME}/ndk/${STORMDNS_ANDROID_NDK_VERSION}"
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Build debug APKs
+        run: ./gradlew :app:assembleDebug
+
+      - name: Confirm both engine binaries are packaged
+        run: |
+          set -euo pipefail
+          apk="$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)"
+          echo "Inspecting ${apk}"
+          for lib in libstormdns_client.so libcottendns_client.so; do
+            unzip -l "${apk}" | grep -q "${lib}" \
+              || { echo "::error::${lib} missing from the debug APK"; exit 1; }
+            echo "  ok ${lib}"
+          done
+
+      - name: Upload debug APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: whitedns-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
