@@ -5330,129 +5330,139 @@ private fun ConnectionProfileDialog(
                 ),
             )
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
-            // Editable on existing profiles too. Gating this to creation meant an
-            // existing profile could never be moved to CottenDNS, and so could
-            // never reach the CottenDNS settings below without being deleted and
-            // recreated from scratch.
-            WhiteDnsDropdownField(
-                label = WhiteDnsL10n.profileFieldEngine,
-                value = engine,
-                options = localizedDnsClientEngines(),
-                onValueChange = { engine = it },
-            )
-            WhiteDnsTextField(
-                label = WhiteDnsL10n.profileFieldName,
-                value = name,
-                onValueChange = { name = it },
-                placeholder = WhiteDnsL10n.profileMyStormDnsPlaceholder,
-            )
-            WhiteDnsTextField(
-                label = WhiteDnsL10n.profileFieldDomain,
-                // Not trimmed on input: a comma-separated list needs the space
-                // after each comma to survive while it is being typed.
-                value = domain,
-                onValueChange = { domain = it },
-                placeholder = WhiteDnsL10n.profileDomainPlaceholder,
-            )
-            WhiteDnsTextField(
-                label = WhiteDnsL10n.profileFieldEncryptionKey,
-                value = encryptionKey,
-                onValueChange = { encryptionKey = it.trim() },
-                placeholder = WhiteDnsL10n.profileEncryptionKeyPlaceholder,
-            )
-            WhiteDnsDropdownField(
-                label = WhiteDnsL10n.profileFieldEncryptionMethod,
-                value = encryptionMethod,
-                options = localizedEncryptionMethods(),
-                onValueChange = { encryptionMethod = it },
-            )
-            if (effectiveEngine == DnsClientEngine.CottenDns) {
-                Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
-                Text(
-                    text = WhiteDnsL10n.profileCottenSectionTitle,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp,
-                        color = WhiteDnsPalette.FieldLabel,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.1.sp,
-                    ),
-                )
-                Spacer(modifier = Modifier.height(WhiteDnsSpacing.sm))
+            // The CottenDNS section makes this dialog taller than a phone
+            // screen, so the fields scroll while the title and the Cancel/Save
+            // row stay put.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // Editable on existing profiles too. Gating this to creation meant an
+                // existing profile could never be moved to CottenDNS, and so could
+                // never reach the CottenDNS settings below without being deleted and
+                // recreated from scratch.
                 WhiteDnsDropdownField(
-                    label = WhiteDnsL10n.profileFieldConfigPreset,
-                    value = cotten.configPreset,
-                    options = localizedCottenConfigPresets(),
-                    onValueChange = { cotten = cotten.copy(configPreset = it) },
+                    label = WhiteDnsL10n.profileFieldEngine,
+                    value = engine,
+                    options = localizedDnsClientEngines(),
+                    onValueChange = { engine = it },
                 )
-                CottenDnsBackgroundScanSlider(
-                    parallelism = cotten.backgroundScanParallelism,
-                    onParallelismChange = { cotten = cotten.copy(backgroundScanParallelism = it) },
+                WhiteDnsTextField(
+                    label = WhiteDnsL10n.profileFieldName,
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = WhiteDnsL10n.profileMyStormDnsPlaceholder,
                 )
-                // Compatibility pins TXT/UDP/63 regardless, so the overrides
-                // below would be misleading if they stayed interactive.
-                if (!cotten.isCompatibility) {
-                    WhiteDnsDropdownField(
-                        label = WhiteDnsL10n.profileFieldTransportMode,
-                        value = cotten.transportMode,
-                        options = localizedCottenTransportModes(),
-                        onValueChange = { cotten = cotten.copy(transportMode = it) },
-                    )
-                    WhiteDnsDropdownField(
-                        label = WhiteDnsL10n.profileFieldDeliveryMode,
-                        value = cotten.deliveryMode,
-                        options = localizedCottenDeliveryModes(),
-                        onValueChange = { cotten = cotten.copy(deliveryMode = it) },
-                    )
-                    WhiteDnsDropdownField(
-                        label = WhiteDnsL10n.profileFieldQnameMode,
-                        value = cotten.qnameMode,
-                        options = localizedCottenQnameModes(),
-                        onValueChange = { cotten = cotten.copy(qnameMode = it) },
-                    )
+                WhiteDnsTextField(
+                    label = WhiteDnsL10n.profileFieldDomain,
+                    // Not trimmed on input: a comma-separated list needs the space
+                    // after each comma to survive while it is being typed.
+                    value = domain,
+                    onValueChange = { domain = it },
+                    placeholder = WhiteDnsL10n.profileDomainPlaceholder,
+                )
+                WhiteDnsTextField(
+                    label = WhiteDnsL10n.profileFieldEncryptionKey,
+                    value = encryptionKey,
+                    onValueChange = { encryptionKey = it.trim() },
+                    placeholder = WhiteDnsL10n.profileEncryptionKeyPlaceholder,
+                )
+                WhiteDnsDropdownField(
+                    label = WhiteDnsL10n.profileFieldEncryptionMethod,
+                    value = encryptionMethod,
+                    options = localizedEncryptionMethods(),
+                    onValueChange = { encryptionMethod = it },
+                )
+                if (effectiveEngine == DnsClientEngine.CottenDns) {
+                    Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
                     Text(
-                        text = WhiteDnsL10n.cottenOverrideHint,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 10.sp,
-                            color = WhiteDnsPalette.Muted,
+                        text = WhiteDnsL10n.profileCottenSectionTitle,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.sp,
+                            color = WhiteDnsPalette.FieldLabel,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp,
                         ),
                     )
-                    if (cotten.transportMode == "dot" || cotten.transportMode == "doh") {
-                        WhiteDnsTextField(
-                            label = WhiteDnsL10n.profileFieldResolverTlsServerName,
-                            value = cotten.resolverTlsServerName,
-                            onValueChange = { cotten = cotten.copy(resolverTlsServerName = it.trim()) },
-                            placeholder = WhiteDnsL10n.profileResolverTlsServerNamePlaceholder,
+                    Spacer(modifier = Modifier.height(WhiteDnsSpacing.sm))
+                    WhiteDnsDropdownField(
+                        label = WhiteDnsL10n.profileFieldConfigPreset,
+                        value = cotten.configPreset,
+                        options = localizedCottenConfigPresets(),
+                        onValueChange = { cotten = cotten.copy(configPreset = it) },
+                    )
+                    CottenDnsBackgroundScanSlider(
+                        parallelism = cotten.backgroundScanParallelism,
+                        onParallelismChange = { cotten = cotten.copy(backgroundScanParallelism = it) },
+                    )
+                    // Compatibility pins TXT/UDP/63 regardless, so the overrides
+                    // below would be misleading if they stayed interactive.
+                    if (!cotten.isCompatibility) {
+                        WhiteDnsDropdownField(
+                            label = WhiteDnsL10n.profileFieldTransportMode,
+                            value = cotten.transportMode,
+                            options = localizedCottenTransportModes(),
+                            onValueChange = { cotten = cotten.copy(transportMode = it) },
                         )
-                        WhiteDnsTextField(
-                            label = WhiteDnsL10n.profileFieldResolverTlsPin,
-                            value = cotten.resolverTlsPin,
-                            onValueChange = { cotten = cotten.copy(resolverTlsPin = it.trim()) },
-                            placeholder = WhiteDnsL10n.profileResolverTlsPinPlaceholder,
+                        WhiteDnsDropdownField(
+                            label = WhiteDnsL10n.profileFieldDeliveryMode,
+                            value = cotten.deliveryMode,
+                            options = localizedCottenDeliveryModes(),
+                            onValueChange = { cotten = cotten.copy(deliveryMode = it) },
                         )
-                        if (cotten.transportMode == "dot") {
+                        WhiteDnsDropdownField(
+                            label = WhiteDnsL10n.profileFieldQnameMode,
+                            value = cotten.qnameMode,
+                            options = localizedCottenQnameModes(),
+                            onValueChange = { cotten = cotten.copy(qnameMode = it) },
+                        )
+                        Text(
+                            text = WhiteDnsL10n.cottenOverrideHint,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.sp,
+                                color = WhiteDnsPalette.Muted,
+                            ),
+                        )
+                        if (cotten.transportMode == "dot" || cotten.transportMode == "doh") {
                             WhiteDnsTextField(
-                                label = WhiteDnsL10n.profileFieldResolverDoTPort,
-                                value = cotten.resolverDoTPort,
-                                onValueChange = { cotten = cotten.copy(resolverDoTPort = it.trim()) },
-                                placeholder = "853",
-                            )
-                        } else {
-                            WhiteDnsTextField(
-                                label = WhiteDnsL10n.profileFieldResolverDoHPort,
-                                value = cotten.resolverDoHPort,
-                                onValueChange = { cotten = cotten.copy(resolverDoHPort = it.trim()) },
-                                placeholder = "443",
+                                label = WhiteDnsL10n.profileFieldResolverTlsServerName,
+                                value = cotten.resolverTlsServerName,
+                                onValueChange = { cotten = cotten.copy(resolverTlsServerName = it.trim()) },
+                                placeholder = WhiteDnsL10n.profileResolverTlsServerNamePlaceholder,
                             )
                             WhiteDnsTextField(
-                                label = WhiteDnsL10n.profileFieldResolverDoHPath,
-                                value = cotten.resolverDoHPath,
-                                onValueChange = { cotten = cotten.copy(resolverDoHPath = it.trim()) },
-                                placeholder = "/dns-query",
+                                label = WhiteDnsL10n.profileFieldResolverTlsPin,
+                                value = cotten.resolverTlsPin,
+                                onValueChange = { cotten = cotten.copy(resolverTlsPin = it.trim()) },
+                                placeholder = WhiteDnsL10n.profileResolverTlsPinPlaceholder,
                             )
+                            if (cotten.transportMode == "dot") {
+                                WhiteDnsTextField(
+                                    label = WhiteDnsL10n.profileFieldResolverDoTPort,
+                                    value = cotten.resolverDoTPort,
+                                    onValueChange = { cotten = cotten.copy(resolverDoTPort = it.trim()) },
+                                    placeholder = "853",
+                                )
+                            } else {
+                                WhiteDnsTextField(
+                                    label = WhiteDnsL10n.profileFieldResolverDoHPort,
+                                    value = cotten.resolverDoHPort,
+                                    onValueChange = { cotten = cotten.copy(resolverDoHPort = it.trim()) },
+                                    placeholder = "443",
+                                )
+                                WhiteDnsTextField(
+                                    label = WhiteDnsL10n.profileFieldResolverDoHPath,
+                                    value = cotten.resolverDoHPath,
+                                    onValueChange = { cotten = cotten.copy(resolverDoHPath = it.trim()) },
+                                    placeholder = "/dns-query",
+                                )
+                            }
                         }
                     }
+                    CottenDnsPresetSummaryPanel(cotten)
                 }
-                CottenDnsPresetSummaryPanel(cotten)
             }
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
             Row(
