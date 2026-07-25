@@ -10,6 +10,7 @@ import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 import shop.whitedns.client.model.importAdvancedSettingsProfileFromToml
+import shop.whitedns.client.model.resolve
 
 class StormDnsConfigRendererTest {
     @Test
@@ -250,6 +251,49 @@ class StormDnsConfigRendererTest {
         }
         assertFalse(toml.contains("leak.example.com"))
         assertFalse(toml.contains("leaked-pin"))
+    }
+
+    /** CottenDNS defaults to a single resolver; StormDNS keeps the shared value. */
+    @Test
+    fun scanParallelismIsSeparatePerEngine() {
+        val settings = WhiteDnsSettings()
+        val shared = settings.resolve().mtuTestParallelismResolvers
+        assertTrue("the shared value should be the faster one", shared > 1)
+
+        val cotten = render(cottenProfile())
+        assertTrue(cotten.contains("MTU_TEST_PARALLELISM_RESOLVERS = 1"))
+
+        val storm = render(cottenProfile().copy(engine = DnsClientEngine.StormDns))
+        assertTrue(storm.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"))
+    }
+
+    @Test
+    fun scanParallelismHonoursTheUserValueAndStaysClamped() {
+        val tuned = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 12)))
+        assertTrue(tuned.contains("MTU_TEST_PARALLELISM_RESOLVERS = 12"))
+
+        val tooLow = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 0)))
+        assertTrue(tooLow.contains("MTU_TEST_PARALLELISM_RESOLVERS = 1"))
+
+        val tooHigh = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 9999)))
+        assertTrue(
+            tooHigh.contains(
+                "MTU_TEST_PARALLELISM_RESOLVERS = ${CottenDnsProfileSettings.MaxScanParallelism}",
+            ),
+        )
+    }
+
+    /** A CottenDNS value must never reach a StormDNS profile. */
+    @Test
+    fun cottenScanParallelismDoesNotFollowAProfileSwitchedToStormDns() {
+        val shared = WhiteDnsSettings().resolve().mtuTestParallelismResolvers
+        val toml = render(
+            cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 3))
+                .copy(engine = DnsClientEngine.StormDns),
+        )
+
+        assertTrue(toml.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"))
+        assertFalse(toml.contains("MTU_TEST_PARALLELISM_RESOLVERS = 3"))
     }
 
     /**

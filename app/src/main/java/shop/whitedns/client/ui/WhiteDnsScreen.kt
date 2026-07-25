@@ -5390,6 +5390,10 @@ private fun ConnectionProfileDialog(
                     options = localizedCottenConfigPresets(),
                     onValueChange = { cotten = cotten.copy(configPreset = it) },
                 )
+                CottenDnsScanParallelismSlider(
+                    parallelism = cotten.scanParallelism,
+                    onParallelismChange = { cotten = cotten.copy(scanParallelism = it) },
+                )
                 // Compatibility pins TXT/UDP/63 regardless, so the overrides
                 // below would be misleading if they stayed interactive.
                 if (!cotten.isCompatibility) {
@@ -9646,6 +9650,64 @@ private fun localizedDnsClientEngines(): List<Choice<String>> = listOf(
     Choice(DnsClientEngine.StormDns, WhiteDnsL10n.profileEngineStormDns),
     Choice(DnsClientEngine.CottenDns, WhiteDnsL10n.profileEngineCottenDns),
 )
+
+/**
+ * CottenDNS-only resolver parallelism for this profile's MTU scan. Separate from
+ * the app-wide resolver-parallelism setting, which stays with StormDNS: the two
+ * engines scan very differently and must not share a value.
+ */
+@Composable
+private fun CottenDnsScanParallelismSlider(
+    parallelism: Int,
+    onParallelismChange: (Int) -> Unit,
+) {
+    val min = CottenDnsProfileSettings.MinScanParallelism
+    val max = CottenDnsProfileSettings.MaxScanParallelism
+    var sliderValue by remember(parallelism) {
+        mutableStateOf(parallelism.coerceIn(min, max).toFloat())
+    }
+    val displayed = sliderValue.roundToInt().coerceIn(min, max)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FieldLabel(WhiteDnsL10n.profileFieldScanParallelism)
+            Text(
+                text = displayed.toString(),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = WhiteDnsPalette.Ink,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                ),
+            )
+        }
+        Slider(
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = {
+                if (displayed != parallelism) {
+                    onParallelismChange(displayed)
+                }
+            },
+            valueRange = min.toFloat()..max.toFloat(),
+            steps = max - min - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = WhiteDnsPalette.Accent,
+                activeTrackColor = WhiteDnsPalette.Accent,
+                inactiveTrackColor = WhiteDnsPalette.ControlBorder,
+            ),
+        )
+        Text(
+            text = WhiteDnsL10n.profileScanParallelismNote,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 10.sp,
+                color = WhiteDnsPalette.Muted,
+            ),
+        )
+    }
+}
 
 /**
  * Read-only recap of what the profile will actually emit. Computed by the

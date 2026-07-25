@@ -46,8 +46,31 @@ object StormDnsConfigRenderer {
             appendLine("ENCRYPTION_KEY = \"${escape(serverProfile.encryptionKey)}\"")
             appendLine("PROTOCOL_TYPE = \"${escape(resolved.protocolType)}\"")
             appendEngineSettingsToml(serverProfile.engine, serverProfile.cottenSettings)
-            appendClientSettingsToml(resolved)
+            appendClientSettingsToml(
+                resolved = resolved,
+                // MTU_TEST_PARALLELISM_RESOLVERS lives in the shared block, so the
+                // CottenDNS value has to be substituted here rather than emitted
+                // in the engine block — a second copy of the key would make the
+                // TOML invalid. StormDNS keeps the shared setting untouched.
+                mtuTestParallelismResolvers = scanParallelismFor(serverProfile, resolved),
+            )
         }.trimEnd()
+    }
+
+    /**
+     * StormDNS uses the app-wide resolver parallelism, which is deliberately
+     * high. CottenDNS uses its own per-profile value, defaulting to a single
+     * resolver so the opening burst matches the engine's background scan. The two
+     * never read each other's setting.
+     */
+    private fun scanParallelismFor(
+        serverProfile: StormDnsServerProfile,
+        resolved: ResolvedWhiteDnsSettings,
+    ): Int {
+        if (DnsClientEngine.normalize(serverProfile.engine) != DnsClientEngine.CottenDns) {
+            return resolved.mtuTestParallelismResolvers
+        }
+        return serverProfile.cottenSettings.normalized().scanParallelism
     }
 
     fun renderScanClientToml(

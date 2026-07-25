@@ -255,6 +255,8 @@ interface WhiteDnsStrings {
     val cottenSummaryMtu: String
     val cottenSummaryHardening: String
     val cottenSummaryHardeningValue: String
+    val profileFieldScanParallelism: String
+    val profileScanParallelismNote: String
     val profileFieldToml: String
     val profileNamePlaceholderFastTunnel: String
     val profileNamePlaceholderHomeResolvers: String
@@ -982,6 +984,8 @@ object EnglishStrings : WhiteDnsStrings {
     override val cottenSummaryMtu = "MTU"
     override val cottenSummaryHardening = "Hardening"
     override val cottenSummaryHardeningValue = "query-id randomization, EDNS cookie, injected NXDOMAIN ignore"
+    override val profileFieldScanParallelism = "Scan Resolvers At Once"
+    override val profileScanParallelismNote = "How many resolvers CottenDNS probes at once. 1 keeps the scan quiet and matches the engine's background scan. StormDNS profiles use the app-wide setting instead."
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "Fast Tunnel"
     override val profileNamePlaceholderHomeResolvers = "Home Resolvers"
@@ -1686,6 +1690,8 @@ object PersianStrings : WhiteDnsStrings {
     override val cottenSummaryMtu = "MTU"
     override val cottenSummaryHardening = "سخت‌سازی"
     override val cottenSummaryHardeningValue = "تصادفی‌سازی query-id، کوکی EDNS، نادیده‌گرفتن NXDOMAIN تزریقی"
+    override val profileFieldScanParallelism = "ریزالورهای همزمان در اسکن"
+    override val profileScanParallelismNote = "تعداد ریزالورهایی که CottenDNS همزمان بررسی می‌کند. مقدار ۱ اسکن را کم‌سروصدا نگه می‌دارد و با اسکن پس‌زمینه موتور هم‌خوان است. پروفایل‌های StormDNS از تنظیم سراسری برنامه استفاده می‌کنند."
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "تونل سریع"
     override val profileNamePlaceholderHomeResolvers = "ریزالورهای خانه"
