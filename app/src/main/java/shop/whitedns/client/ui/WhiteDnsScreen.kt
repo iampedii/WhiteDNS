@@ -129,6 +129,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -5311,10 +5312,16 @@ private fun ConnectionProfileDialog(
     val effectiveEngine = DnsClientEngine.normalize(engine)
     val canSave = name.isNotBlank() && ServerDomains.isValid(domain) && encryptionKey.isNotBlank()
 
+    // Bound the dialog to the viewport rather than a fixed height: a tall phone,
+    // a tablet, landscape and large font scaling all give very different room,
+    // and anything taller than the screen clips the Save button off the bottom.
+    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp * 0.9f).dp
+
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = maxDialogHeight)
                 .clip(RoundedCornerShape(22.dp))
                 .background(WhiteDnsPalette.Surface)
                 .border(1.5.dp, WhiteDnsPalette.Border, RoundedCornerShape(22.dp))
@@ -5330,13 +5337,13 @@ private fun ConnectionProfileDialog(
                 ),
             )
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
-            // The CottenDNS section makes this dialog taller than a phone
-            // screen, so the fields scroll while the title and the Cancel/Save
-            // row stay put.
+            // Takes the space left over after the title and the Cancel/Save row,
+            // so those two stay reachable at any height. fill = false lets a
+            // short profile still render a compact dialog.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 460.dp)
+                    .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState()),
             ) {
                 // Editable on existing profiles too. Gating this to creation meant an
