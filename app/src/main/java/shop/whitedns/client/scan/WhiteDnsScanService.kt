@@ -218,14 +218,14 @@ class WhiteDnsScanService : Service() {
         }
 
         if (validResolvers.isNotEmpty()) {
-            WhiteDnsScannerResultStore.appendValidResolvers(applicationContext, validResolvers)
+            WhiteDnsScannerResultStore.appendValidResolvers(applicationContext, engine, validResolvers)
         }
         if (workerInputs.isEmpty()) {
             val completedState = aggregateState(
                 WhiteDnsScanStatus.Completed,
                 "Resolver file is empty",
             )
-            writeScanResults(scanRoot, completedState)
+            writeScanResults(scanRoot, engine, completedState)
             publishState(completedState)
             WhiteDnsScanRequestStore.delete(applicationContext, sessionId)
             exitForeground()
@@ -245,6 +245,7 @@ class WhiteDnsScanService : Service() {
                     ) { line ->
                         handleWorkerOutput(
                             workerIndex = index,
+                            engine = engine,
                             line = line,
                             workerStats = workerStats,
                             validResolvers = validResolvers,
@@ -287,7 +288,7 @@ class WhiteDnsScanService : Service() {
         val finalState = synchronized(stateLock) {
             aggregateState(finalStatus, finalMessage)
         }
-        writeScanResults(scanRoot, finalState)
+        writeScanResults(scanRoot, engine, finalState)
         publishState(finalState)
         if (finalStatus == WhiteDnsScanStatus.Completed) {
             WhiteDnsScanRequestStore.delete(applicationContext, sessionId)
@@ -298,6 +299,7 @@ class WhiteDnsScanService : Service() {
 
     private fun handleWorkerOutput(
         workerIndex: Int,
+        engine: String,
         line: String,
         workerStats: Array<WorkerScanStats>,
         validResolvers: MutableSet<String>,
@@ -330,7 +332,7 @@ class WhiteDnsScanService : Service() {
                     validCount = validResolvers.size
                 }
                 if (added) {
-                    WhiteDnsScannerResultStore.appendValidResolvers(applicationContext, listOf(resolver))
+                    WhiteDnsScannerResultStore.appendValidResolvers(applicationContext, engine, listOf(resolver))
                 }
                 publishAggregate(WhiteDnsScanStatus.Running, "Found $validCount valid resolvers", false)
             }
@@ -539,10 +541,11 @@ class WhiteDnsScanService : Service() {
         }
     }
 
-    private fun writeScanResults(scanRoot: File, state: WhiteDnsScanState) {
+    private fun writeScanResults(scanRoot: File, engine: String, state: WhiteDnsScanState) {
         val resultsDir = File(scanRoot, "results").apply { mkdirs() }
         val scannerResultResolvers = WhiteDnsScannerResultStore.mergeValidResolvers(
             applicationContext,
+            engine,
             state.validResolverEntries,
         )
         File(resultsDir, WhiteDnsScannerResultStore.ResultFileName).writeText(

@@ -214,15 +214,68 @@ class StormDnsConfigRendererTest {
         }
     }
 
+    /**
+     * A profile can carry CottenDNS settings while running the StormDNS engine —
+     * the user may have switched engines, or the values may have been restored
+     * from JSON. None of it may reach the StormDNS binary, which does not know
+     * these keys and drives its own background MTU scan.
+     */
     @Test
     fun renderClientTomlKeepsCottenDnsKeysOutOfStormDnsProfiles() {
-        val profile = cottenProfile().copy(engine = DnsClientEngine.StormDns)
-        val toml = render(profile)
+        val loaded = CottenDnsProfileSettings(
+            serverType = CottenDnsProfileSettings.ServerTypeCompatibility,
+            configPreset = "survival",
+            transportMode = "doh",
+            deliveryMode = "all",
+            qnameMode = "aggressive",
+            resolverTlsServerName = "leak.example.com",
+            resolverTlsPin = "leaked-pin",
+            resolverDoHPath = "/leaked",
+        )
+        val toml = render(cottenProfile(cotten = loaded).copy(engine = DnsClientEngine.StormDns))
 
-        assertFalse(toml.contains("CONFIG_PRESET"))
-        assertFalse(toml.contains("QNAME_LABEL_LENGTH"))
-        assertFalse(toml.contains("ADAPTIVE_DUPLICATION"))
-        assertFalse(toml.contains("LEGACY_SESSION_ID"))
+        val cottenOnlyKeys = listOf(
+            "CONFIG_PRESET", "LEGACY_SESSION_ID", "RESOLVER_TRANSPORT", "QUERY_TYPES",
+            "QNAME_LABEL_LENGTH", "FAST_CONNECT", "RESOLVER_RATE_LIMIT_ENABLED",
+            "DNS_RANDOMIZE_QUERY_ID", "DNS_QNAME_CASE_RANDOMIZATION",
+            "RESOLVER_IGNORE_INJECTED_NXDOMAIN", "ADAPTIVE_DUPLICATION",
+            "DUPLICATION_PREFER_DISTINCT_DOMAINS", "ADAPTIVE_DUPLICATION_TARGET_DELIVERY",
+            "DNS_EDNS_COOKIE", "EDNS_UDP_SIZE", "MTU_PROBE_SAMPLES", "MTU_MAX_LOSS",
+            "MTU_ADAPTIVE_GROUPING", "MTU_GROUP_GAP_RATIO",
+            "RESOLVER_TLS_SERVER_NAME", "RESOLVER_TLS_PIN",
+            "RESOLVER_DOT_PORT", "RESOLVER_DOH_PORT", "RESOLVER_DOH_PATH",
+        )
+        cottenOnlyKeys.forEach { key ->
+            assertFalse("CottenDNS key $key leaked into a StormDNS profile", toml.contains(key))
+        }
+        assertFalse(toml.contains("leak.example.com"))
+        assertFalse(toml.contains("leaked-pin"))
+    }
+
+    /**
+     * The reverse direction: everything the shared block emits must be a key both
+     * engines understand, so a StormDNS-shaped setting never reaches CottenDNS as
+     * an unknown key.
+     */
+    @Test
+    fun stormDnsAndCottenDnsShareTheSameBaseKeys() {
+        fun keysFor(engine: String): Set<String> =
+            render(cottenProfile().copy(engine = engine))
+                .lines()
+                .mapNotNull { it.substringBefore(" =", "").ifBlank { null } }
+                .toSet()
+
+        val storm = keysFor(DnsClientEngine.StormDns)
+        val cotten = keysFor(DnsClientEngine.CottenDns)
+
+        assertEquals(
+            "StormDNS emitted keys CottenDNS never sees",
+            emptySet<String>(),
+            storm - cotten,
+        )
+        // The difference is exactly the CottenDNS-only block.
+        assertTrue((cotten - storm).contains("CONFIG_PRESET"))
+        assertTrue((cotten - storm).contains("MTU_ADAPTIVE_GROUPING"))
     }
 
     @Test

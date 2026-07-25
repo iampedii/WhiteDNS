@@ -1898,13 +1898,17 @@ class WhiteDnsViewModel(
                 .filterNot(validEntries::contains)
             val processed = (validEntries + rejectedEntries).toSet()
             val sessionId = UUID.randomUUID().toString()
+            val scanEngine = DnsClientEngine.normalize(
+                uiState.settings.selectedConnectionProfile().engine,
+            )
             val resolverFile = File(
-                File(File(appContext.noBackupFilesDir, "stormdns/scan"), sessionId).apply { mkdirs() },
+                File(File(appContext.noBackupFilesDir, "$scanEngine/scan"), sessionId).apply { mkdirs() },
                 "resume.resolvers",
             )
             val remainingResolverCount = withContext(Dispatchers.IO) {
                 runCatching {
-                    val excludedResolvers = processed + WhiteDnsScannerResultStore.readValidResolverSet(appContext)
+                    val excludedResolvers = processed +
+                        WhiteDnsScannerResultStore.readValidResolverSet(appContext, scanEngine)
                     File(scanRequest.resolverFilePath).bufferedReader(Charsets.UTF_8).useLines { lines ->
                         WhiteDnsScannerResultStore.writePendingScanResolverFile(
                             lines = lines,
@@ -2339,8 +2343,12 @@ class WhiteDnsViewModel(
         uiState = uiState.copy(scanState = failedState)
     }
 
+    /** Scan scratch files live beside the results for the same engine. */
+    private fun selectedScanEngine(): String =
+        DnsClientEngine.normalize(uiState.settings.selectedConnectionProfile().engine)
+
     private fun importScanResolverFile(uri: Uri, sessionId: String): ImportedScanResolverFile {
-        val scanDir = File(File(appContext.noBackupFilesDir, "stormdns/scan"), sessionId).apply {
+        val scanDir = File(File(appContext.noBackupFilesDir, "${selectedScanEngine()}/scan"), sessionId).apply {
             mkdirs()
         }
         val resolverFile = File(scanDir, "input.resolvers")
@@ -2367,7 +2375,7 @@ class WhiteDnsViewModel(
     }
 
     private fun importDefaultScanResolverFile(sessionId: String): ImportedScanResolverFile {
-        val scanDir = File(File(appContext.noBackupFilesDir, "stormdns/scan"), sessionId).apply {
+        val scanDir = File(File(appContext.noBackupFilesDir, "${selectedScanEngine()}/scan"), sessionId).apply {
             mkdirs()
         }
         val resolverFile = File(scanDir, "default.resolvers")
@@ -2416,7 +2424,11 @@ class WhiteDnsViewModel(
         if (scanState.isRunning) {
             return null
         }
-        val scannerResultText = WhiteDnsScannerResultStore.readValidResolvers(appContext)
+        val scannerResultEngine = DnsClientEngine.normalize(
+            currentSettings.selectedConnectionProfile().engine,
+        )
+        val scannerResultText = WhiteDnsScannerResultStore
+            .readValidResolvers(appContext, scannerResultEngine)
             .joinToString(separator = "\n")
         if (scannerResultText.isBlank() || scannerResultText == lastScannerResultProfileText) {
             return null
