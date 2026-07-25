@@ -5308,9 +5308,7 @@ private fun ConnectionProfileDialog(
     var cotten by remember(profile?.id) {
         mutableStateOf(profile?.cottenSettings?.normalized() ?: CottenDnsProfileSettings())
     }
-    // An existing profile's engine is fixed at creation, so the CottenDNS block
-    // must follow the saved value rather than the dropdown state.
-    val effectiveEngine = DnsClientEngine.normalize(profile?.engine ?: engine)
+    val effectiveEngine = DnsClientEngine.normalize(engine)
     val canSave = name.isNotBlank() && ServerDomains.isValid(domain) && encryptionKey.isNotBlank()
 
     Dialog(onDismissRequest = onDismiss) {
@@ -5332,14 +5330,16 @@ private fun ConnectionProfileDialog(
                 ),
             )
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
-            if (profile == null) {
-                WhiteDnsDropdownField(
-                    label = WhiteDnsL10n.profileFieldEngine,
-                    value = engine,
-                    options = localizedDnsClientEngines(),
-                    onValueChange = { engine = it },
-                )
-            }
+            // Editable on existing profiles too. Gating this to creation meant an
+            // existing profile could never be moved to CottenDNS, and so could
+            // never reach the CottenDNS settings below without being deleted and
+            // recreated from scratch.
+            WhiteDnsDropdownField(
+                label = WhiteDnsL10n.profileFieldEngine,
+                value = engine,
+                options = localizedDnsClientEngines(),
+                onValueChange = { engine = it },
+            )
             WhiteDnsTextField(
                 label = WhiteDnsL10n.profileFieldName,
                 value = name,
@@ -5488,7 +5488,7 @@ private fun ConnectionProfileDialog(
                                 customServerEncryptionMethod = encryptionMethod,
                                 resolverProfileId = profile?.resolverProfileId.orEmpty(),
                                 connectionMode = profile?.connectionMode ?: "proxy",
-                                engine = profile?.engine ?: engine,
+                                engine = engine,
                                 cottenSettings = cotten.normalized(),
                             ),
                         )
