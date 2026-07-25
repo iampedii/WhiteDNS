@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import shop.whitedns.client.model.ConnectionProfile
+import shop.whitedns.client.model.CottenDnsProfileSettings
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.WhiteDnsSettings
@@ -71,6 +72,125 @@ class StormDnsConfigRendererTest {
         assertTrue(toml.contains("RESOLVER_TRANSPORT = \"auto\""))
         assertTrue(toml.contains("""QUERY_TYPES = ["TXT"]"""))
         assertTrue(toml.contains("FAST_CONNECT = true"))
+    }
+
+    private fun cottenProfile(
+        domain: String = "cotten.example.com",
+        cotten: CottenDnsProfileSettings = CottenDnsProfileSettings(),
+    ): ConnectionProfile = ConnectionProfile(
+        id = "cotten",
+        name = "CottenDNS",
+        customServerDomain = domain,
+        customServerEncryptionKey = "secret-key",
+        engine = DnsClientEngine.CottenDns,
+        cottenSettings = cotten,
+    )
+
+    private fun render(profile: ConnectionProfile): String =
+        StormDnsConfigRenderer.renderClientToml(
+            connectionProfile = profile,
+            settings = WhiteDnsSettings(connectionProfiles = listOf(profile)),
+        )
+
+    @Test
+    fun renderClientTomlEmitsEveryDomainInTheCommaSeparatedList() {
+        val toml = render(cottenProfile(domain = "a.example.com, b.example.com., a.example.com"))
+
+        // Trailing dot stripped, duplicate dropped, order preserved.
+        assertTrue(toml.contains("""DOMAINS = ["a.example.com", "b.example.com"]"""))
+    }
+
+    @Test
+    fun renderClientTomlKeepsSingleDomainOutputUnchanged() {
+        val toml = render(cottenProfile(domain = "only.example.com"))
+
+        assertTrue(toml.contains("""DOMAINS = ["only.example.com"]"""))
+    }
+
+    @Test
+    fun renderClientTomlAppliesCottenDnsPreset() {
+        val toml = render(cottenProfile(cotten = CottenDnsProfileSettings(configPreset = "survival")))
+
+        assertTrue(toml.contains("CONFIG_PRESET = \"survival\""))
+        assertTrue(toml.contains("""QUERY_TYPES = ["TXT", "CNAME", "HTTPS", "A"]"""))
+        assertTrue(toml.contains("QNAME_LABEL_LENGTH = 42"))
+        assertTrue(toml.contains("MTU_PROBE_SAMPLES = 5"))
+        assertTrue(toml.contains("EDNS_UDP_SIZE = 1232"))
+    }
+
+    @Test
+    fun renderClientTomlLetsExplicitOverridesBeatThePreset() {
+        val toml = render(
+            cottenProfile(
+                cotten = CottenDnsProfileSettings(
+                    configPreset = "survival",
+                    transportMode = "tcp",
+                    deliveryMode = "txt",
+                    qnameMode = "aggressive",
+                ),
+            ),
+        )
+
+        assertTrue(toml.contains("RESOLVER_TRANSPORT = \"tcp\""))
+        assertTrue(toml.contains("""QUERY_TYPES = ["TXT"]"""))
+        assertTrue(toml.contains("QNAME_LABEL_LENGTH = 32"))
+    }
+
+    @Test
+    fun renderClientTomlEmitsEncryptedResolverKeysOnlyForDotAndDoh() {
+        val doh = render(
+            cottenProfile(
+                cotten = CottenDnsProfileSettings(
+                    transportMode = "doh",
+                    resolverTlsServerName = "dns.example.com",
+                ),
+            ),
+        )
+        assertTrue(doh.contains("RESOLVER_DOH_PORT = 443"))
+        assertTrue(doh.contains("RESOLVER_DOH_PATH = \"/dns-query\""))
+        assertTrue(doh.contains("RESOLVER_TLS_SERVER_NAME = \"dns.example.com\""))
+        assertFalse(doh.contains("RESOLVER_DOT_PORT"))
+
+        val udp = render(cottenProfile(cotten = CottenDnsProfileSettings(transportMode = "udp")))
+        assertFalse(udp.contains("RESOLVER_DOH_PORT"))
+        assertFalse(udp.contains("RESOLVER_TLS_SERVER_NAME"))
+    }
+
+    /** A legacy server must never receive the native-only optimization suite. */
+    @Test
+    fun renderClientTomlForcesTheSafeSubsetInCompatibilityMode() {
+        val toml = render(
+            cottenProfile(
+                cotten = CottenDnsProfileSettings(
+                    serverType = CottenDnsProfileSettings.ServerTypeCompatibility,
+                    configPreset = "speed",
+                    transportMode = "doh",
+                    deliveryMode = "all",
+                    qnameMode = "aggressive",
+                ),
+            ),
+        )
+
+        assertTrue(toml.contains("LEGACY_SESSION_ID = true"))
+        assertTrue(toml.contains("CONFIG_PRESET = \"default\""))
+        assertTrue(toml.contains("RESOLVER_TRANSPORT = \"udp\""))
+        assertTrue(toml.contains("""QUERY_TYPES = ["TXT"]"""))
+        assertTrue(toml.contains("QNAME_LABEL_LENGTH = 63"))
+        assertTrue(toml.contains("ADAPTIVE_DUPLICATION = false"))
+        assertTrue(toml.contains("DNS_EDNS_COOKIE = false"))
+        assertTrue(toml.contains("MTU_ADAPTIVE_GROUPING = false"))
+        assertFalse(toml.contains("RESOLVER_DOH_PORT"))
+    }
+
+    @Test
+    fun renderClientTomlKeepsCottenDnsKeysOutOfStormDnsProfiles() {
+        val profile = cottenProfile().copy(engine = DnsClientEngine.StormDns)
+        val toml = render(profile)
+
+        assertFalse(toml.contains("CONFIG_PRESET"))
+        assertFalse(toml.contains("QNAME_LABEL_LENGTH"))
+        assertFalse(toml.contains("ADAPTIVE_DUPLICATION"))
+        assertFalse(toml.contains("LEGACY_SESSION_ID"))
     }
 
     @Test

@@ -218,6 +218,39 @@ interface WhiteDnsStrings {
     val profileFieldEngine: String
     val profileEngineStormDns: String
     val profileEngineCottenDns: String
+    val profileCottenSectionTitle: String
+    val profileFieldServerType: String
+    val profileFieldConfigPreset: String
+    val profileFieldTransportMode: String
+    val profileFieldDeliveryMode: String
+    val profileFieldQnameMode: String
+    val profileFieldResolverTlsServerName: String
+    val profileFieldResolverTlsPin: String
+    val profileFieldResolverDoTPort: String
+    val profileFieldResolverDoHPort: String
+    val profileFieldResolverDoHPath: String
+    val profileResolverTlsServerNamePlaceholder: String
+    val profileResolverTlsPinPlaceholder: String
+    val cottenServerTypeNative: String
+    val cottenServerTypeCompatibility: String
+    val cottenFromPreset: String
+    val cottenPresetDefault: String
+    val cottenPresetSpeed: String
+    val cottenPresetSurvival: String
+    val cottenPresetTcpSurvival: String
+    val cottenPresetMasterStorm: String
+    val cottenTransportAuto: String
+    val cottenTransportUdp: String
+    val cottenTransportTcp: String
+    val cottenTransportDot: String
+    val cottenTransportDoh: String
+    val cottenDeliveryTxt: String
+    val cottenDeliveryTxtCname: String
+    val cottenDeliveryTxtHttps: String
+    val cottenDeliveryAll: String
+    val cottenQnameOff: String
+    val cottenQnameModerate: String
+    val cottenQnameAggressive: String
     val profileFieldToml: String
     val profileNamePlaceholderFastTunnel: String
     val profileNamePlaceholderHomeResolvers: String
@@ -908,6 +941,39 @@ object EnglishStrings : WhiteDnsStrings {
     override val profileFieldEngine = "Client Engine"
     override val profileEngineStormDns = "StormDNS"
     override val profileEngineCottenDns = "CottenDNS"
+    override val profileCottenSectionTitle = "COTTENDNS SETTINGS"
+    override val profileFieldServerType = "Server Type"
+    override val profileFieldConfigPreset = "Preset"
+    override val profileFieldTransportMode = "Transport"
+    override val profileFieldDeliveryMode = "Delivery"
+    override val profileFieldQnameMode = "QNAME Reshaping"
+    override val profileFieldResolverTlsServerName = "TLS Server Name"
+    override val profileFieldResolverTlsPin = "TLS Pin"
+    override val profileFieldResolverDoTPort = "DoT Port"
+    override val profileFieldResolverDoHPort = "DoH Port"
+    override val profileFieldResolverDoHPath = "DoH Path"
+    override val profileResolverTlsServerNamePlaceholder = "Defaults to the profile domain"
+    override val profileResolverTlsPinPlaceholder = "Optional SPKI pin"
+    override val cottenServerTypeNative = "CottenDNS (native)"
+    override val cottenServerTypeCompatibility = "Master / Storm DNS (compatible)"
+    override val cottenFromPreset = "From preset"
+    override val cottenPresetDefault = "Default"
+    override val cottenPresetSpeed = "Speed"
+    override val cottenPresetSurvival = "Survival"
+    override val cottenPresetTcpSurvival = "TCP Survival"
+    override val cottenPresetMasterStorm = "Master / Storm DNS (compatible)"
+    override val cottenTransportAuto = "Auto (UDP + TCP/53 fallback)"
+    override val cottenTransportUdp = "UDP/53 only"
+    override val cottenTransportTcp = "TCP/53 only"
+    override val cottenTransportDot = "DoT (TLS, falls back to UDP/TCP)"
+    override val cottenTransportDoh = "DoH (HTTPS, falls back to UDP/TCP)"
+    override val cottenDeliveryTxt = "TXT only"
+    override val cottenDeliveryTxtCname = "TXT + CNAME"
+    override val cottenDeliveryTxtHttps = "TXT + HTTPS"
+    override val cottenDeliveryAll = "All (TXT / CNAME / NULL / HTTPS)"
+    override val cottenQnameOff = "Off (max capacity, 63)"
+    override val cottenQnameModerate = "Moderate (42)"
+    override val cottenQnameAggressive = "Aggressive (32)"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "Fast Tunnel"
     override val profileNamePlaceholderHomeResolvers = "Home Resolvers"
@@ -1575,6 +1641,39 @@ object PersianStrings : WhiteDnsStrings {
     override val profileFieldEngine = "موتور کلاینت"
     override val profileEngineStormDns = "StormDNS"
     override val profileEngineCottenDns = "CottenDNS"
+    override val profileCottenSectionTitle = "تنظیمات CottenDNS"
+    override val profileFieldServerType = "نوع سرور"
+    override val profileFieldConfigPreset = "پیش‌تنظیم"
+    override val profileFieldTransportMode = "ترابری"
+    override val profileFieldDeliveryMode = "روش تحویل"
+    override val profileFieldQnameMode = "بازشکل‌دهی QNAME"
+    override val profileFieldResolverTlsServerName = "نام سرور TLS"
+    override val profileFieldResolverTlsPin = "پین TLS"
+    override val profileFieldResolverDoTPort = "پورت DoT"
+    override val profileFieldResolverDoHPort = "پورت DoH"
+    override val profileFieldResolverDoHPath = "مسیر DoH"
+    override val profileResolverTlsServerNamePlaceholder = "پیش‌فرض: دامنه پروفایل"
+    override val profileResolverTlsPinPlaceholder = "پین SPKI (اختیاری)"
+    override val cottenServerTypeNative = "CottenDNS (بومی)"
+    override val cottenServerTypeCompatibility = "Master / Storm DNS (سازگار)"
+    override val cottenFromPreset = "از پیش‌تنظیم"
+    override val cottenPresetDefault = "پیش‌فرض"
+    override val cottenPresetSpeed = "سرعت"
+    override val cottenPresetSurvival = "بقا"
+    override val cottenPresetTcpSurvival = "بقای TCP"
+    override val cottenPresetMasterStorm = "Master / Storm DNS (سازگار)"
+    override val cottenTransportAuto = "خودکار (UDP و بازگشت به TCP/53)"
+    override val cottenTransportUdp = "فقط UDP/53"
+    override val cottenTransportTcp = "فقط TCP/53"
+    override val cottenTransportDot = "DoT (TLS، بازگشت به UDP/TCP)"
+    override val cottenTransportDoh = "DoH (HTTPS، بازگشت به UDP/TCP)"
+    override val cottenDeliveryTxt = "فقط TXT"
+    override val cottenDeliveryTxtCname = "TXT + CNAME"
+    override val cottenDeliveryTxtHttps = "TXT + HTTPS"
+    override val cottenDeliveryAll = "همه (TXT / CNAME / NULL / HTTPS)"
+    override val cottenQnameOff = "خاموش (بیشترین ظرفیت، ۶۳)"
+    override val cottenQnameModerate = "متوسط (۴۲)"
+    override val cottenQnameAggressive = "تهاجمی (۳۲)"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "تونل سریع"
     override val profileNamePlaceholderHomeResolvers = "ریزالورهای خانه"

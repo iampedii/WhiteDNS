@@ -342,6 +342,9 @@ class WhiteDnsSettingsStore(
                     engine = DnsClientEngine.normalize(
                         item.optString("engine", DnsClientEngine.StormDns),
                     ),
+                    cottenSettings = cottenDnsProfileSettingsFromJson(
+                        item.optJSONObject("cottenSettings"),
+                    ),
                 )
             }
                 .filter { it.id.isNotBlank() }
@@ -362,7 +365,8 @@ class WhiteDnsSettingsStore(
                     .put("customServerEncryptionMethod", profile.customServerEncryptionMethod)
                     .put("resolverProfileId", profile.resolverProfileId)
                     .put("connectionMode", profile.connectionMode)
-                    .put("engine", DnsClientEngine.normalize(profile.engine)),
+                    .put("engine", DnsClientEngine.normalize(profile.engine))
+                    .put("cottenSettings", profile.cottenSettings.toJson()),
             )
         }
         return array.toString()

@@ -2,6 +2,7 @@ package shop.whitedns.client.model
 
 import java.io.Serializable
 import java.net.InetAddress
+import org.json.JSONObject
 
 enum class ConnectionStatus {
     DISCONNECTED,
@@ -30,6 +31,142 @@ object DnsClientEngine {
     }
 }
 
+/**
+ * A profile's server routes. Stored as one comma-separated string so the
+ * settings schema and the `stormdns://` / `cottendns://` link format stay
+ * unchanged; the list form is only materialized when rendering TOML.
+ */
+object ServerDomains {
+
+    fun split(raw: String): List<String> {
+        return raw.split(',')
+            .map { it.trim().trimEnd('.') }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+    }
+
+    fun normalize(raw: String): String = split(raw).joinToString(", ")
+
+    fun isValid(raw: String): Boolean = split(raw).isNotEmpty()
+
+    /** The route shown in profile lists and used as a fallback profile name. */
+    fun primary(raw: String): String = split(raw).firstOrNull().orEmpty()
+}
+
+/**
+ * CottenDNS-only tunnel settings, ported from the cottendns-engine-ui branch.
+ * Ignored entirely for StormDNS profiles, which have no equivalent knobs.
+ *
+ * "preset" on an override means "derive it from [configPreset]"; any other value
+ * is an explicit user choice. [serverType] Compatibility always wins and forces
+ * the legacy-safe subset, so a CottenDNS binary can still drive an older
+ * MasterDNS/StormDNS server.
+ */
+data class CottenDnsProfileSettings(
+    val serverType: String = ServerTypeCottenDns,
+    val configPreset: String = "default",
+    val transportMode: String = ModePreset,
+    val deliveryMode: String = ModePreset,
+    val qnameMode: String = ModePreset,
+    // Used only when the effective transport is dot/doh. A blank server name
+    // means "use the profile's domain", which is what the certificate is issued
+    // for, so most people never touch these.
+    val resolverTlsServerName: String = "",
+    val resolverTlsPin: String = "",
+    val resolverDoTPort: String = "853",
+    val resolverDoHPort: String = "443",
+    val resolverDoHPath: String = "/dns-query",
+) : Serializable {
+
+    val isCompatibility: Boolean
+        get() = normalizeServerType(serverType) == ServerTypeCompatibility
+
+    fun normalized(): CottenDnsProfileSettings = copy(
+        serverType = normalizeServerType(serverType),
+        configPreset = normalizeConfigPreset(configPreset),
+        transportMode = normalizeChoice(transportMode, TransportModeValues),
+        deliveryMode = normalizeChoice(deliveryMode, DeliveryModeValues),
+        qnameMode = normalizeChoice(qnameMode, QnameModeValues),
+        resolverDoTPort = normalizePort(resolverDoTPort, "853"),
+        resolverDoHPort = normalizePort(resolverDoHPort, "443"),
+        resolverDoHPath = resolverDoHPath.trim().ifBlank { "/dns-query" },
+    )
+
+    companion object {
+        const val ServerTypeCottenDns = "cottendns"
+        const val ServerTypeCompatibility = "compatibility"
+        const val ModePreset = "preset"
+
+        val ConfigPresetValues = listOf("default", "speed", "survival", "tcp-survival", "master-storm")
+        val TransportModeValues = listOf(ModePreset, "auto", "udp", "tcp", "dot", "doh")
+        val DeliveryModeValues = listOf(ModePreset, "txt", "txt-cname", "txt-https", "all")
+        val QnameModeValues = listOf(ModePreset, "off", "moderate", "aggressive")
+
+        fun normalizeServerType(value: String?): String {
+            return when (value?.trim()?.lowercase()) {
+                ServerTypeCompatibility, "compat", "master", "storm" -> ServerTypeCompatibility
+                else -> ServerTypeCottenDns
+            }
+        }
+
+        fun normalizeConfigPreset(value: String): String {
+            return when (value.trim().lowercase()) {
+                "speed" -> "speed"
+                "survival" -> "survival"
+                "tcp", "tcp-survival", "tcp_survival" -> "tcp-survival"
+                "master", "storm", "master-storm", "master_storm" -> "master-storm"
+                else -> "default"
+            }
+        }
+
+        private fun normalizeChoice(value: String, allowed: List<String>): String {
+            val candidate = value.trim().lowercase()
+            return if (candidate in allowed) candidate else ModePreset
+        }
+
+        private fun normalizePort(value: String, fallback: String): String {
+            val port = value.trim().toIntOrNull() ?: return fallback
+            return if (port in 1..65535) port.toString() else fallback
+        }
+    }
+}
+
+/** Shared by the settings store and the runtime launch store. */
+fun CottenDnsProfileSettings.toJson(): JSONObject {
+    val n = normalized()
+    return JSONObject()
+        .put("serverType", n.serverType)
+        .put("configPreset", n.configPreset)
+        .put("transportMode", n.transportMode)
+        .put("deliveryMode", n.deliveryMode)
+        .put("qnameMode", n.qnameMode)
+        .put("resolverTlsServerName", n.resolverTlsServerName)
+        .put("resolverTlsPin", n.resolverTlsPin)
+        .put("resolverDoTPort", n.resolverDoTPort)
+        .put("resolverDoHPort", n.resolverDoHPort)
+        .put("resolverDoHPath", n.resolverDoHPath)
+}
+
+/** A missing or malformed object yields defaults, so old payloads still load. */
+fun cottenDnsProfileSettingsFromJson(json: JSONObject?): CottenDnsProfileSettings {
+    val defaults = CottenDnsProfileSettings()
+    if (json == null) {
+        return defaults
+    }
+    return CottenDnsProfileSettings(
+        serverType = json.optString("serverType", defaults.serverType),
+        configPreset = json.optString("configPreset", defaults.configPreset),
+        transportMode = json.optString("transportMode", defaults.transportMode),
+        deliveryMode = json.optString("deliveryMode", defaults.deliveryMode),
+        qnameMode = json.optString("qnameMode", defaults.qnameMode),
+        resolverTlsServerName = json.optString("resolverTlsServerName", defaults.resolverTlsServerName),
+        resolverTlsPin = json.optString("resolverTlsPin", defaults.resolverTlsPin),
+        resolverDoTPort = json.optString("resolverDoTPort", defaults.resolverDoTPort),
+        resolverDoHPort = json.optString("resolverDoHPort", defaults.resolverDoHPort),
+        resolverDoHPath = json.optString("resolverDoHPath", defaults.resolverDoHPath),
+    ).normalized()
+}
+
 data class StormDnsServerProfile(
     val id: String,
     val label: String,
@@ -37,6 +174,7 @@ data class StormDnsServerProfile(
     val encryptionKey: String,
     val encryptionMethod: Int,
     val engine: String = DnsClientEngine.StormDns,
+    val cottenSettings: CottenDnsProfileSettings = CottenDnsProfileSettings(),
 )
 
 data class ConnectionProfile(
@@ -49,6 +187,7 @@ data class ConnectionProfile(
     val resolverProfileId: String = "",
     val connectionMode: String = "proxy",
     val engine: String = DnsClientEngine.StormDns,
+    val cottenSettings: CottenDnsProfileSettings = CottenDnsProfileSettings(),
 ) : Serializable {
     companion object {
         const val DefaultId = "default"
@@ -670,6 +809,7 @@ fun WhiteDnsSettings.normalizedConnectionProfiles(): List<ConnectionProfile> {
             profile.copy(
                 name = profile.name.ifBlank { "Connection ${index + 1}" },
                 serverMode = "custom",
+                customServerDomain = ServerDomains.normalize(profile.customServerDomain),
                 customServerEncryptionMethod = profile.customServerEncryptionMethod.coerceIn(0, 5),
                 resolverProfileId = profile.resolverProfileId.takeIf { it in resolverIds }.orEmpty(),
                 connectionMode = when (profile.connectionMode) {
@@ -677,6 +817,7 @@ fun WhiteDnsSettings.normalizedConnectionProfiles(): List<ConnectionProfile> {
                     else -> "proxy"
                 },
                 engine = DnsClientEngine.normalize(profile.engine),
+                cottenSettings = profile.cottenSettings.normalized(),
             )
         }
 
@@ -949,6 +1090,7 @@ fun WhiteDnsSettings.upsertConnectionProfile(profile: ConnectionProfile): WhiteD
         id = profile.id.ifBlank { "profile-${System.currentTimeMillis()}" },
         name = profile.name.ifBlank { "Connection" },
         serverMode = "custom",
+        customServerDomain = ServerDomains.normalize(profile.customServerDomain),
         customServerEncryptionMethod = profile.customServerEncryptionMethod.coerceIn(0, 5),
         resolverProfileId = profile.resolverProfileId.takeIf { it in resolverIds }.orEmpty(),
         connectionMode = when (profile.connectionMode) {
@@ -956,6 +1098,7 @@ fun WhiteDnsSettings.upsertConnectionProfile(profile: ConnectionProfile): WhiteD
             else -> "proxy"
         },
         engine = DnsClientEngine.normalize(profile.engine),
+        cottenSettings = profile.cottenSettings.normalized(),
     )
     val profiles = normalizedConnectionProfiles()
     val updatedProfiles = if (profiles.any { it.id == normalizedProfile.id }) {
@@ -1281,7 +1424,12 @@ private data class ConnectionServerKey(
 )
 
 private fun ConnectionProfile.duplicateServerKey(): ConnectionServerKey? {
-    val domain = customServerDomain.trim().trimEnd('.').lowercase()
+    // Order-independent: the same routes listed in a different order are the
+    // same server, not a second profile.
+    val domain = ServerDomains.split(customServerDomain)
+        .map { it.lowercase() }
+        .sorted()
+        .joinToString(",")
     val encryptionKey = customServerEncryptionKey.trim()
     return if (domain.isNotBlank() && encryptionKey.isNotBlank()) {
         ConnectionServerKey(

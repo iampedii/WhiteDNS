@@ -90,6 +90,7 @@ object RuntimeLaunchRequestStore {
             .put("encryptionKey", profile.encryptionKey)
             .put("encryptionMethod", profile.encryptionMethod)
             .put("engine", DnsClientEngine.normalize(profile.engine))
+            .put("cottenSettings", profile.cottenSettings.toJson())
     }
 
     private fun decodeServerProfile(json: JSONObject): StormDnsServerProfile {
@@ -102,6 +103,9 @@ object RuntimeLaunchRequestStore {
             engine = DnsClientEngine.normalize(
                 json.optString("engine", DnsClientEngine.StormDns),
             ),
+            cottenSettings = cottenDnsProfileSettingsFromJson(
+                json.optJSONObject("cottenSettings"),
+            ),
         )
     }
 
@@ -110,10 +114,12 @@ object RuntimeLaunchRequestStore {
         settings.splitTunnelPackages.forEach { packageName ->
             splitTunnelPackages.put(packageName)
         }
-        val engine = DnsClientEngine.normalize(settings.selectedConnectionProfile().engine)
+        val selectedProfile = settings.selectedConnectionProfile()
+        val engine = DnsClientEngine.normalize(selectedProfile.engine)
         return JSONObject()
             .put("selectedConnectionProfileId", settings.selectedConnectionProfileId)
             .put("engine", engine)
+            .put("cottenSettings", selectedProfile.cottenSettings.toJson())
             .put("serverMode", settings.serverMode)
             .put("customServerDomain", settings.customServerDomain)
             .put("customServerEncryptionKey", settings.customServerEncryptionKey)
@@ -193,6 +199,9 @@ object RuntimeLaunchRequestStore {
                     connectionMode = json.optString("connectionMode", "proxy"),
                     engine = DnsClientEngine.normalize(
                         json.optString("engine", DnsClientEngine.StormDns),
+                    ),
+                    cottenSettings = cottenDnsProfileSettingsFromJson(
+                        json.optJSONObject("cottenSettings"),
                     ),
                 ),
             ),

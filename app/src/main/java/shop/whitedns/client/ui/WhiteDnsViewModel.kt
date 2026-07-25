@@ -47,6 +47,7 @@ import shop.whitedns.client.model.ConnectionVerificationStatus
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.ResolverRuntimeState
+import shop.whitedns.client.model.ServerDomains
 import shop.whitedns.client.model.ServerTestResult
 import shop.whitedns.client.model.ServerTestState
 import shop.whitedns.client.model.ServerTestStatus
@@ -2489,20 +2490,22 @@ class WhiteDnsViewModel(
     }
 
     private fun serverProfileFromConnectionProfile(connectionProfile: ConnectionProfile): StormDnsServerProfile? {
-        val domain = connectionProfile.customServerDomain
-            .trim()
-            .trimEnd('.')
+        val domain = ServerDomains.normalize(connectionProfile.customServerDomain)
         val encryptionKey = connectionProfile.customServerEncryptionKey.trim()
         if (domain.isBlank() || encryptionKey.isBlank()) {
             return null
         }
+        // Identity and label follow the primary route; the full list would read
+        // as "a.example, b.example" in the UI.
+        val primaryDomain = ServerDomains.primary(domain)
         return StormDnsServerProfile(
-            id = connectionProfile.id.ifBlank { domain },
-            label = connectionProfile.name.ifBlank { domain },
+            id = connectionProfile.id.ifBlank { primaryDomain },
+            label = connectionProfile.name.ifBlank { primaryDomain },
             domain = domain,
             encryptionKey = encryptionKey,
             encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
             engine = DnsClientEngine.normalize(connectionProfile.engine),
+            cottenSettings = connectionProfile.cottenSettings,
         )
     }
 

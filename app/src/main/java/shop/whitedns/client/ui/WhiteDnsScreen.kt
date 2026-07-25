@@ -161,9 +161,11 @@ import shop.whitedns.client.model.ConnectionStats
 import shop.whitedns.client.model.ConnectionStatus
 import shop.whitedns.client.model.ConnectionVerificationState
 import shop.whitedns.client.model.ConnectionVerificationStatus
+import shop.whitedns.client.model.CottenDnsProfileSettings
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolverProfile
 import shop.whitedns.client.model.ResolverRuntimeState
+import shop.whitedns.client.model.ServerDomains
 import shop.whitedns.client.model.ServerTestResult
 import shop.whitedns.client.model.ServerTestState
 import shop.whitedns.client.model.ServerTestStatus
@@ -5302,7 +5304,13 @@ private fun ConnectionProfileDialog(
     var engine by remember(profile?.id) {
         mutableStateOf(DnsClientEngine.normalize(profile?.engine ?: DnsClientEngine.StormDns))
     }
-    val canSave = name.isNotBlank() && domain.isNotBlank() && encryptionKey.isNotBlank()
+    var cotten by remember(profile?.id) {
+        mutableStateOf(profile?.cottenSettings?.normalized() ?: CottenDnsProfileSettings())
+    }
+    // An existing profile's engine is fixed at creation, so the CottenDNS block
+    // must follow the saved value rather than the dropdown state.
+    val effectiveEngine = DnsClientEngine.normalize(profile?.engine ?: engine)
+    val canSave = name.isNotBlank() && ServerDomains.isValid(domain) && encryptionKey.isNotBlank()
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -5339,8 +5347,10 @@ private fun ConnectionProfileDialog(
             )
             WhiteDnsTextField(
                 label = WhiteDnsL10n.profileFieldDomain,
+                // Not trimmed on input: a comma-separated list needs the space
+                // after each comma to survive while it is being typed.
                 value = domain,
-                onValueChange = { domain = it.trim() },
+                onValueChange = { domain = it },
                 placeholder = WhiteDnsL10n.profileDomainPlaceholder,
             )
             WhiteDnsTextField(
@@ -5355,6 +5365,88 @@ private fun ConnectionProfileDialog(
                 options = localizedEncryptionMethods(),
                 onValueChange = { encryptionMethod = it },
             )
+            if (effectiveEngine == DnsClientEngine.CottenDns) {
+                Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
+                Text(
+                    text = WhiteDnsL10n.profileCottenSectionTitle,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 12.sp,
+                        color = WhiteDnsPalette.FieldLabel,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp,
+                    ),
+                )
+                Spacer(modifier = Modifier.height(WhiteDnsSpacing.sm))
+                WhiteDnsDropdownField(
+                    label = WhiteDnsL10n.profileFieldServerType,
+                    value = cotten.serverType,
+                    options = localizedCottenServerTypes(),
+                    onValueChange = { cotten = cotten.copy(serverType = it) },
+                )
+                WhiteDnsDropdownField(
+                    label = WhiteDnsL10n.profileFieldConfigPreset,
+                    value = cotten.configPreset,
+                    options = localizedCottenConfigPresets(),
+                    onValueChange = { cotten = cotten.copy(configPreset = it) },
+                )
+                // Compatibility pins TXT/UDP/63 regardless, so the overrides
+                // below would be misleading if they stayed interactive.
+                if (!cotten.isCompatibility) {
+                    WhiteDnsDropdownField(
+                        label = WhiteDnsL10n.profileFieldTransportMode,
+                        value = cotten.transportMode,
+                        options = localizedCottenTransportModes(),
+                        onValueChange = { cotten = cotten.copy(transportMode = it) },
+                    )
+                    WhiteDnsDropdownField(
+                        label = WhiteDnsL10n.profileFieldDeliveryMode,
+                        value = cotten.deliveryMode,
+                        options = localizedCottenDeliveryModes(),
+                        onValueChange = { cotten = cotten.copy(deliveryMode = it) },
+                    )
+                    WhiteDnsDropdownField(
+                        label = WhiteDnsL10n.profileFieldQnameMode,
+                        value = cotten.qnameMode,
+                        options = localizedCottenQnameModes(),
+                        onValueChange = { cotten = cotten.copy(qnameMode = it) },
+                    )
+                    if (cotten.transportMode == "dot" || cotten.transportMode == "doh") {
+                        WhiteDnsTextField(
+                            label = WhiteDnsL10n.profileFieldResolverTlsServerName,
+                            value = cotten.resolverTlsServerName,
+                            onValueChange = { cotten = cotten.copy(resolverTlsServerName = it.trim()) },
+                            placeholder = WhiteDnsL10n.profileResolverTlsServerNamePlaceholder,
+                        )
+                        WhiteDnsTextField(
+                            label = WhiteDnsL10n.profileFieldResolverTlsPin,
+                            value = cotten.resolverTlsPin,
+                            onValueChange = { cotten = cotten.copy(resolverTlsPin = it.trim()) },
+                            placeholder = WhiteDnsL10n.profileResolverTlsPinPlaceholder,
+                        )
+                        if (cotten.transportMode == "dot") {
+                            WhiteDnsTextField(
+                                label = WhiteDnsL10n.profileFieldResolverDoTPort,
+                                value = cotten.resolverDoTPort,
+                                onValueChange = { cotten = cotten.copy(resolverDoTPort = it.trim()) },
+                                placeholder = "853",
+                            )
+                        } else {
+                            WhiteDnsTextField(
+                                label = WhiteDnsL10n.profileFieldResolverDoHPort,
+                                value = cotten.resolverDoHPort,
+                                onValueChange = { cotten = cotten.copy(resolverDoHPort = it.trim()) },
+                                placeholder = "443",
+                            )
+                            WhiteDnsTextField(
+                                label = WhiteDnsL10n.profileFieldResolverDoHPath,
+                                value = cotten.resolverDoHPath,
+                                onValueChange = { cotten = cotten.copy(resolverDoHPath = it.trim()) },
+                                placeholder = "/dns-query",
+                            )
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -5378,12 +5470,13 @@ private fun ConnectionProfileDialog(
                                 id = profile?.id.orEmpty(),
                                 name = name.trim(),
                                 serverMode = "custom",
-                                customServerDomain = domain.trim().trimEnd('.'),
+                                customServerDomain = ServerDomains.normalize(domain),
                                 customServerEncryptionKey = encryptionKey.trim(),
                                 customServerEncryptionMethod = encryptionMethod,
                                 resolverProfileId = profile?.resolverProfileId.orEmpty(),
                                 connectionMode = profile?.connectionMode ?: "proxy",
                                 engine = profile?.engine ?: engine,
+                                cottenSettings = cotten.normalized(),
                             ),
                         )
                     },
@@ -5444,7 +5537,14 @@ private fun ConnectionProfileRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val domain = profile.customServerDomain.ifBlank { WhiteDnsL10n.profileDomainFallback }
+    // Multi-domain profiles show the primary route plus a count, so the row does
+    // not stretch with every extra domain.
+    val domainList = ServerDomains.split(profile.customServerDomain)
+    val domain = when {
+        domainList.isEmpty() -> WhiteDnsL10n.profileDomainFallback
+        domainList.size == 1 -> domainList.first()
+        else -> "${domainList.first()} +${domainList.size - 1}"
+    }
     val engine = DnsClientEngine.displayName(profile.engine)
     val activeStatus = WhiteDnsL10n.profileStatusActive
     val selectedStatus = WhiteDnsL10n.profileStatusSelected
@@ -9536,6 +9636,48 @@ private fun localizedSplitTunnelModes(): List<Choice<String>> = listOf(
 private fun localizedDnsClientEngines(): List<Choice<String>> = listOf(
     Choice(DnsClientEngine.StormDns, WhiteDnsL10n.profileEngineStormDns),
     Choice(DnsClientEngine.CottenDns, WhiteDnsL10n.profileEngineCottenDns),
+)
+
+@Composable
+private fun localizedCottenServerTypes(): List<Choice<String>> = listOf(
+    Choice(CottenDnsProfileSettings.ServerTypeCottenDns, WhiteDnsL10n.cottenServerTypeNative),
+    Choice(CottenDnsProfileSettings.ServerTypeCompatibility, WhiteDnsL10n.cottenServerTypeCompatibility),
+)
+
+@Composable
+private fun localizedCottenConfigPresets(): List<Choice<String>> = listOf(
+    Choice("default", WhiteDnsL10n.cottenPresetDefault),
+    Choice("speed", WhiteDnsL10n.cottenPresetSpeed),
+    Choice("survival", WhiteDnsL10n.cottenPresetSurvival),
+    Choice("tcp-survival", WhiteDnsL10n.cottenPresetTcpSurvival),
+    Choice("master-storm", WhiteDnsL10n.cottenPresetMasterStorm),
+)
+
+@Composable
+private fun localizedCottenTransportModes(): List<Choice<String>> = listOf(
+    Choice(CottenDnsProfileSettings.ModePreset, WhiteDnsL10n.cottenFromPreset),
+    Choice("auto", WhiteDnsL10n.cottenTransportAuto),
+    Choice("udp", WhiteDnsL10n.cottenTransportUdp),
+    Choice("tcp", WhiteDnsL10n.cottenTransportTcp),
+    Choice("dot", WhiteDnsL10n.cottenTransportDot),
+    Choice("doh", WhiteDnsL10n.cottenTransportDoh),
+)
+
+@Composable
+private fun localizedCottenDeliveryModes(): List<Choice<String>> = listOf(
+    Choice(CottenDnsProfileSettings.ModePreset, WhiteDnsL10n.cottenFromPreset),
+    Choice("txt", WhiteDnsL10n.cottenDeliveryTxt),
+    Choice("txt-cname", WhiteDnsL10n.cottenDeliveryTxtCname),
+    Choice("txt-https", WhiteDnsL10n.cottenDeliveryTxtHttps),
+    Choice("all", WhiteDnsL10n.cottenDeliveryAll),
+)
+
+@Composable
+private fun localizedCottenQnameModes(): List<Choice<String>> = listOf(
+    Choice(CottenDnsProfileSettings.ModePreset, WhiteDnsL10n.cottenFromPreset),
+    Choice("off", WhiteDnsL10n.cottenQnameOff),
+    Choice("moderate", WhiteDnsL10n.cottenQnameModerate),
+    Choice("aggressive", WhiteDnsL10n.cottenQnameAggressive),
 )
 
 @Composable

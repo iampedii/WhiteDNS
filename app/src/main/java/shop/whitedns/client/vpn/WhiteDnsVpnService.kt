@@ -34,6 +34,7 @@ import shop.whitedns.client.MainActivity
 import shop.whitedns.client.R
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolvedWhiteDnsSettings
+import shop.whitedns.client.model.ServerDomains
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsOptions
 import shop.whitedns.client.model.WhiteDnsSettings
@@ -673,9 +674,7 @@ class WhiteDnsVpnService : VpnService() {
 
         private fun selectServerProfile(settings: WhiteDnsSettings): StormDnsServerProfile? {
             val connectionProfile = settings.selectedConnectionProfile()
-            val domain = connectionProfile.customServerDomain
-                .trim()
-                .trimEnd('.')
+            val domain = ServerDomains.normalize(connectionProfile.customServerDomain)
             val encryptionKey = connectionProfile.customServerEncryptionKey.trim()
             if (domain.isBlank() || encryptionKey.isBlank()) {
                 return null
@@ -687,6 +686,7 @@ class WhiteDnsVpnService : VpnService() {
                 encryptionKey = encryptionKey,
                 encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
                 engine = connectionProfile.engine,
+                cottenSettings = connectionProfile.cottenSettings,
             )
         }
 

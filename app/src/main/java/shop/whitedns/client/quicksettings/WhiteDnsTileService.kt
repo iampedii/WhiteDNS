@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import java.util.UUID
 import shop.whitedns.client.MainActivity
 import shop.whitedns.client.model.DnsClientEngine
+import shop.whitedns.client.model.ServerDomains
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 import shop.whitedns.client.model.WhiteDnsSettingsStore
@@ -138,9 +139,7 @@ class WhiteDnsTileService : TileService() {
 
     private fun selectServerProfile(settings: WhiteDnsSettings): StormDnsServerProfile? {
         val connectionProfile = settings.selectedConnectionProfile()
-        val domain = connectionProfile.customServerDomain
-            .trim()
-            .trimEnd('.')
+        val domain = ServerDomains.normalize(connectionProfile.customServerDomain)
         val encryptionKey = connectionProfile.customServerEncryptionKey.trim()
         if (domain.isBlank() || encryptionKey.isBlank()) {
             return null
@@ -152,6 +151,7 @@ class WhiteDnsTileService : TileService() {
             encryptionKey = encryptionKey,
             encryptionMethod = connectionProfile.customServerEncryptionMethod.coerceIn(0, 5),
             engine = connectionProfile.engine,
+            cottenSettings = connectionProfile.cottenSettings,
         )
     }
 }
