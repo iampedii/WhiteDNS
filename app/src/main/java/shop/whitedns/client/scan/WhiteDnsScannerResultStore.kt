@@ -14,7 +14,38 @@ object WhiteDnsScannerResultStore {
     private val ResultFileLock = Any()
 
     fun resultFile(context: Context, engine: String): File {
-        return File(resultDirectory(context, engine), ResultFileName)
+        val target = File(resultDirectory(context, engine), ResultFileName)
+        if (DnsClientEngine.normalize(engine) != DnsClientEngine.StormDns) {
+            // StormDNS still owns the pre-split location, so only the other
+            // engines need seeding from it.
+            synchronized(ResultFileLock) {
+                seedResultFileIfMissing(
+                    legacyFile = File(resultDirectory(context, DnsClientEngine.StormDns), ResultFileName),
+                    target = target,
+                )
+            }
+        }
+        return target
+    }
+
+    /**
+     * Before results were scoped per engine, every engine appended to the
+     * StormDNS directory. Splitting them would otherwise wipe a CottenDNS
+     * profile's scan history and force a rescan, so the first read inherits a
+     * copy of the shared list. StormDNS keeps reading the original file, so both
+     * engines keep the resolvers they already had and only diverge from here.
+     *
+     * Copied, never moved, and only when the target is absent — once an engine
+     * has its own results it is never touched again.
+     */
+    internal fun seedResultFileIfMissing(legacyFile: File, target: File) {
+        if (target.exists() || !legacyFile.isFile) {
+            return
+        }
+        runCatching {
+            target.parentFile?.mkdirs()
+            legacyFile.copyTo(target, overwrite = false)
+        }
     }
 
     fun readValidResolvers(context: Context, engine: String): List<String> {
