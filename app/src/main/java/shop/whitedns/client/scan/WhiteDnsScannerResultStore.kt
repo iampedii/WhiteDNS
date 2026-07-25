@@ -13,46 +13,38 @@ object WhiteDnsScannerResultStore {
     const val ResultFileName = "Scanner result"
     private val ResultFileLock = Any()
 
+    /** Engines write only to their own store; reads span all of them. */
+    private val AllEngines = listOf(DnsClientEngine.StormDns, DnsClientEngine.CottenDns)
+
+    /** The store this engine owns. Only this engine ever writes here. */
     fun resultFile(context: Context, engine: String): File {
-        val target = File(resultDirectory(context, engine), ResultFileName)
-        if (DnsClientEngine.normalize(engine) != DnsClientEngine.StormDns) {
-            // StormDNS still owns the pre-split location, so only the other
-            // engines need seeding from it.
-            synchronized(ResultFileLock) {
-                seedResultFileIfMissing(
-                    legacyFile = File(resultDirectory(context, DnsClientEngine.StormDns), ResultFileName),
-                    target = target,
-                )
-            }
-        }
-        return target
+        return File(resultDirectory(context, engine), ResultFileName)
     }
 
     /**
-     * Before results were scoped per engine, every engine appended to the
-     * StormDNS directory. Splitting them would otherwise wipe a CottenDNS
-     * profile's scan history and force a rescan, so the first read inherits a
-     * copy of the shared list. StormDNS keeps reading the original file, so both
-     * engines keep the resolvers they already had and only diverge from here.
+     * Every engine's scanned resolvers, this engine's own first.
      *
-     * Copied, never moved, and only when the target is absent — once an engine
-     * has its own results it is never touched again.
+     * Storage stays per engine so each one's results are still its own, but a
+     * resolver another engine already reached is worth trying: both tunnel over
+     * the same resolvers, and validity only really diverges under opt-in DoT/DoH
+     * or unusual query types. Reading only one store also starves an engine's
+     * early-start threshold — StormDNS needs 8 valid resolvers before it
+     * fast-connects, so a half-filled store silently costs Fast Connect.
      */
-    internal fun seedResultFileIfMissing(legacyFile: File, target: File) {
-        if (target.exists() || !legacyFile.isFile) {
-            return
-        }
-        runCatching {
-            target.parentFile?.mkdirs()
-            legacyFile.copyTo(target, overwrite = false)
-        }
-    }
-
     fun readValidResolvers(context: Context, engine: String): List<String> {
         return readValidResolverSet(context, engine).toList()
     }
 
     fun readValidResolverSet(context: Context, engine: String): Set<String> {
+        val ordered = LinkedHashSet<String>()
+        ordered += readEngineStore(context, engine)
+        AllEngines.filterNot { DnsClientEngine.normalize(it) == DnsClientEngine.normalize(engine) }
+            .forEach { other -> ordered += readEngineStore(context, other) }
+        return ordered
+    }
+
+    /** Just one engine's store, for the write path, which must stay scoped. */
+    private fun readEngineStore(context: Context, engine: String): Set<String> {
         return runCatching {
             val file = resultFile(context, engine)
             if (!file.isFile) {
@@ -65,14 +57,18 @@ object WhiteDnsScannerResultStore {
         }.getOrDefault(emptySet())
     }
 
+    /**
+     * Folds newly scanned resolvers into this engine's own store, then returns
+     * the full cross-engine view for display.
+     */
     fun mergeValidResolvers(context: Context, engine: String, resolvers: Iterable<String>): List<String> {
         val incomingResolvers = normalizeResolverEntries(resolvers)
         if (incomingResolvers.isEmpty()) {
             return readValidResolvers(context, engine)
         }
-        val mergedResolvers = (readValidResolvers(context, engine) + incomingResolvers).distinct()
-        writeValidResolvers(context, engine, mergedResolvers)
-        return mergedResolvers
+        val ownResolvers = (readEngineStore(context, engine).toList() + incomingResolvers).distinct()
+        writeValidResolvers(context, engine, ownResolvers)
+        return readValidResolvers(context, engine)
     }
 
     fun appendValidResolvers(context: Context, engine: String, resolvers: Iterable<String>) {
