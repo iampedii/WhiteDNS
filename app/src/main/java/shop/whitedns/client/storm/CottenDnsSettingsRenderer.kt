@@ -91,6 +91,59 @@ internal object CottenDnsSettingsRenderer {
         }
     }
 
+    /** What the profile will actually emit, for the read-only UI summary. */
+    data class Summary(
+        val transport: String,
+        val delivery: String,
+        val mtu: String,
+    )
+
+    /**
+     * Derived from the same helpers the renderer uses, so the summary cannot
+     * drift away from the emitted TOML the way a hand-written table does.
+     */
+    fun summarize(settings: CottenDnsProfileSettings): Summary {
+        val cotten = settings.normalized()
+        val compat = cotten.isCompatibility
+        val preset = cotten.configPreset
+
+        val transport = when {
+            compat -> "udp"
+            cotten.transportMode != CottenDnsProfileSettings.ModePreset -> cotten.transportMode
+            else -> resolverTransport(preset)
+        }
+        val transportText = when (transport) {
+            "udp" -> "UDP/53 only"
+            "tcp" -> "forced DNS-over-TCP/53"
+            "dot" -> "DoT over TLS, falls back to UDP then TCP/53"
+            "doh" -> "DoH over HTTPS, falls back to UDP then TCP/53"
+            else -> "UDP/53 with TCP/53 fallback"
+        }
+
+        val types = when {
+            compat -> listOf("TXT")
+            cotten.deliveryMode != CottenDnsProfileSettings.ModePreset -> deliveryTypesFor(cotten.deliveryMode)
+            else -> queryTypeSet(preset)
+        }
+        val deliveryText = if (types.size == 1) "${types.first()} only" else types.joinToString(" + ")
+
+        val qnameLen = when {
+            compat -> 63
+            cotten.qnameMode == "off" -> 63
+            cotten.qnameMode == "moderate" -> 42
+            cotten.qnameMode == "aggressive" -> 32
+            else -> qnameLabelLength(preset)
+        }
+        val mtuText = if (compat) {
+            "single global scan, 1 probe sample, ${qnameLen}-char labels"
+        } else {
+            "adaptive per-group MTU, ${mtuProbeSamples(preset)} probe sample(s), " +
+                "${mtuMaxLoss(preset)} max loss, ${qnameLen}-char labels"
+        }
+
+        return Summary(transport = transportText, delivery = deliveryText, mtu = mtuText)
+    }
+
     private fun StringBuilder.appendEncryptedResolverToml(
         transport: String,
         cotten: CottenDnsProfileSettings,

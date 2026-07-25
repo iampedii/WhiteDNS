@@ -385,6 +385,10 @@ object WhiteDnsL10n {
     val cottenQnameOff: String @Composable get() = LocalWhiteDnsStrings.current.cottenQnameOff
     val cottenQnameModerate: String @Composable get() = LocalWhiteDnsStrings.current.cottenQnameModerate
     val cottenQnameAggressive: String @Composable get() = LocalWhiteDnsStrings.current.cottenQnameAggressive
+    val cottenOverrideHint: String @Composable get() = LocalWhiteDnsStrings.current.cottenOverrideHint
+    val cottenSummaryMtu: String @Composable get() = LocalWhiteDnsStrings.current.cottenSummaryMtu
+    val cottenSummaryHardening: String @Composable get() = LocalWhiteDnsStrings.current.cottenSummaryHardening
+    val cottenSummaryHardeningValue: String @Composable get() = LocalWhiteDnsStrings.current.cottenSummaryHardeningValue
     val profileFieldToml: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldToml
     val profileNamePlaceholderFastTunnel: String @Composable get() = LocalWhiteDnsStrings.current.profileNamePlaceholderFastTunnel
     val profileNamePlaceholderHomeResolvers: String @Composable get() = LocalWhiteDnsStrings.current.profileNamePlaceholderHomeResolvers

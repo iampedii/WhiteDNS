@@ -182,6 +182,38 @@ class StormDnsConfigRendererTest {
         assertFalse(toml.contains("RESOLVER_DOH_PORT"))
     }
 
+    /**
+     * The summary exists to tell the user what the profile emits, so it is only
+     * useful if it agrees with the emitted TOML.
+     */
+    @Test
+    fun summaryAgreesWithTheGeneratedToml() {
+        val cases = listOf(
+            CottenDnsProfileSettings(),
+            CottenDnsProfileSettings(configPreset = "survival"),
+            CottenDnsProfileSettings(configPreset = "speed", transportMode = "tcp"),
+            CottenDnsProfileSettings(deliveryMode = "all", qnameMode = "aggressive"),
+            CottenDnsProfileSettings(serverType = CottenDnsProfileSettings.ServerTypeCompatibility),
+        )
+
+        cases.forEach { settings ->
+            val toml = render(cottenProfile(cotten = settings))
+            val summary = CottenDnsSettingsRenderer.summarize(settings)
+
+            val qnameLen = Regex("QNAME_LABEL_LENGTH = (\\d+)").find(toml)!!.groupValues[1]
+            assertTrue(
+                "summary MTU line lost the label length for $settings",
+                summary.mtu.contains("$qnameLen-char labels"),
+            )
+
+            val types = Regex("QUERY_TYPES = \\[(.*)]").find(toml)!!.groupValues[1]
+                .split(",").map { it.trim().trim('"') }
+            types.forEach { type ->
+                assertTrue("summary delivery dropped $type for $settings", summary.delivery.contains(type))
+            }
+        }
+    }
+
     @Test
     fun renderClientTomlKeepsCottenDnsKeysOutOfStormDnsProfiles() {
         val profile = cottenProfile().copy(engine = DnsClientEngine.StormDns)

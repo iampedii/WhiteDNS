@@ -251,6 +251,10 @@ interface WhiteDnsStrings {
     val cottenQnameOff: String
     val cottenQnameModerate: String
     val cottenQnameAggressive: String
+    val cottenOverrideHint: String
+    val cottenSummaryMtu: String
+    val cottenSummaryHardening: String
+    val cottenSummaryHardeningValue: String
     val profileFieldToml: String
     val profileNamePlaceholderFastTunnel: String
     val profileNamePlaceholderHomeResolvers: String
@@ -974,6 +978,10 @@ object EnglishStrings : WhiteDnsStrings {
     override val cottenQnameOff = "Off (max capacity, 63)"
     override val cottenQnameModerate = "Moderate (42)"
     override val cottenQnameAggressive = "Aggressive (32)"
+    override val cottenOverrideHint = "These three override the preset. Master / Storm DNS mode always forces TXT over UDP with 63-char labels."
+    override val cottenSummaryMtu = "MTU"
+    override val cottenSummaryHardening = "Hardening"
+    override val cottenSummaryHardeningValue = "query-id randomization, EDNS cookie, injected NXDOMAIN ignore"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "Fast Tunnel"
     override val profileNamePlaceholderHomeResolvers = "Home Resolvers"
@@ -1674,6 +1682,10 @@ object PersianStrings : WhiteDnsStrings {
     override val cottenQnameOff = "خاموش (بیشترین ظرفیت، ۶۳)"
     override val cottenQnameModerate = "متوسط (۴۲)"
     override val cottenQnameAggressive = "تهاجمی (۳۲)"
+    override val cottenOverrideHint = "این سه مورد پیش‌تنظیم را بازنویسی می‌کنند. حالت Master / Storm DNS همیشه TXT روی UDP با برچسب ۶۳ کاراکتری را اعمال می‌کند."
+    override val cottenSummaryMtu = "MTU"
+    override val cottenSummaryHardening = "سخت‌سازی"
+    override val cottenSummaryHardeningValue = "تصادفی‌سازی query-id، کوکی EDNS، نادیده‌گرفتن NXDOMAIN تزریقی"
     override val profileFieldToml = "TOML"
     override val profileNamePlaceholderFastTunnel = "تونل سریع"
     override val profileNamePlaceholderHomeResolvers = "ریزالورهای خانه"

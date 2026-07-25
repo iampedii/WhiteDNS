@@ -211,6 +211,7 @@ import shop.whitedns.client.model.validateResolverText
 import shop.whitedns.client.model.WhiteDnsAutoTunePresets
 import shop.whitedns.client.model.WhiteDnsParallelTest
 import shop.whitedns.client.model.syncSelectedConnectionProfileFields
+import shop.whitedns.client.storm.CottenDnsSettingsRenderer
 import shop.whitedns.client.storm.StormDnsConfigRenderer
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.BarcodeFormat
@@ -5410,6 +5411,13 @@ private fun ConnectionProfileDialog(
                         options = localizedCottenQnameModes(),
                         onValueChange = { cotten = cotten.copy(qnameMode = it) },
                     )
+                    Text(
+                        text = WhiteDnsL10n.cottenOverrideHint,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 10.sp,
+                            color = WhiteDnsPalette.Muted,
+                        ),
+                    )
                     if (cotten.transportMode == "dot" || cotten.transportMode == "doh") {
                         WhiteDnsTextField(
                             label = WhiteDnsL10n.profileFieldResolverTlsServerName,
@@ -5446,6 +5454,7 @@ private fun ConnectionProfileDialog(
                         }
                     }
                 }
+                CottenDnsPresetSummaryPanel(cotten)
             }
             Spacer(modifier = Modifier.height(WhiteDnsSpacing.md))
             Row(
@@ -9637,6 +9646,58 @@ private fun localizedDnsClientEngines(): List<Choice<String>> = listOf(
     Choice(DnsClientEngine.StormDns, WhiteDnsL10n.profileEngineStormDns),
     Choice(DnsClientEngine.CottenDns, WhiteDnsL10n.profileEngineCottenDns),
 )
+
+/**
+ * Read-only recap of what the profile will actually emit. Computed by the
+ * renderer itself, so it cannot drift from the generated TOML.
+ */
+@Composable
+private fun CottenDnsPresetSummaryPanel(settings: CottenDnsProfileSettings) {
+    val summary = remember(settings) { CottenDnsSettingsRenderer.summarize(settings) }
+    Spacer(modifier = Modifier.height(WhiteDnsSpacing.sm))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(WhiteDnsPalette.SurfaceAlt)
+            .border(1.5.dp, WhiteDnsPalette.Border, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        CottenDnsFeatureLine(WhiteDnsL10n.profileFieldTransportMode, summary.transport)
+        CottenDnsFeatureLine(WhiteDnsL10n.profileFieldDeliveryMode, summary.delivery)
+        CottenDnsFeatureLine(WhiteDnsL10n.cottenSummaryMtu, summary.mtu)
+        CottenDnsFeatureLine(WhiteDnsL10n.cottenSummaryHardening, WhiteDnsL10n.cottenSummaryHardeningValue)
+    }
+}
+
+@Composable
+private fun CottenDnsFeatureLine(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.width(74.dp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 10.sp,
+                color = WhiteDnsPalette.Muted,
+                fontWeight = FontWeight.Medium,
+            ),
+        )
+        Text(
+            text = value,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+                color = WhiteDnsPalette.Description,
+            ),
+        )
+    }
+}
 
 @Composable
 private fun localizedCottenServerTypes(): List<Choice<String>> = listOf(
