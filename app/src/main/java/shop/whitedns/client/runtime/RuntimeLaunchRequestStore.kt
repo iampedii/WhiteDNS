@@ -8,9 +8,11 @@ import shop.whitedns.client.model.ConnectionProfile
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
+import shop.whitedns.client.model.cottenDnsProfileSettingsFromJson
 import shop.whitedns.client.model.runtimeConnectionSettings
 import shop.whitedns.client.model.selectedConnectionProfile
 import shop.whitedns.client.model.syncSelectedConnectionProfileFields
+import shop.whitedns.client.model.toJson
 
 data class RuntimeLaunchRequest(
     val id: String,

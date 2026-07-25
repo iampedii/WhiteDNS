@@ -1,8 +1,10 @@
 package shop.whitedns.client.storm
 
 import shop.whitedns.client.model.ConnectionProfile
+import shop.whitedns.client.model.CottenDnsProfileSettings
 import shop.whitedns.client.model.DnsClientEngine
 import shop.whitedns.client.model.ResolvedWhiteDnsSettings
+import shop.whitedns.client.model.ServerDomains
 import shop.whitedns.client.model.StormDnsServerProfile
 import shop.whitedns.client.model.WhiteDnsSettings
 import shop.whitedns.client.model.normalizedResolverProfiles
