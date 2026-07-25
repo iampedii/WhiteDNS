@@ -254,61 +254,60 @@ class StormDnsConfigRendererTest {
     }
 
     /**
-     * The initial scan runs before the tunnel is up, so it must stay parallel.
-     * The engine only throttles the continuing background phase to one worker on
-     * its parallel code path — a value of 1 would take the serial path instead
-     * and slow the initial scan down, so the default must stay well above 1.
+     * The pre-connection scan must stay on the shared app-wide value for both
+     * engines, so connecting is never slowed by the CottenDNS background knob.
      */
     @Test
-    fun cottenDnsKeepsTheInitialScanFastByDefault() {
-        val toml = render(cottenProfile())
-        val emitted = Regex("""MTU_TEST_PARALLELISM_RESOLVERS = (\d+)""")
-            .find(toml)!!.groupValues[1].toInt()
-
-        assertTrue("initial CottenDNS scan must not be serialized", emitted > 1)
-        assertEquals(CottenDnsProfileSettings.DefaultScanParallelism, emitted)
-    }
-
-    @Test
-    fun scanParallelismIsSeparatePerEngine() {
+    fun initialScanParallelismStaysSharedAndFast() {
         val shared = WhiteDnsSettings().resolve().mtuTestParallelismResolvers
+        assertTrue("the shared initial value should be parallel", shared > 1)
 
-        // Same run, different engines, independent values.
-        val cotten = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 7)))
-        assertTrue(cotten.contains("MTU_TEST_PARALLELISM_RESOLVERS = 7"))
-
-        val storm = render(cottenProfile().copy(engine = DnsClientEngine.StormDns))
-        assertTrue(storm.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"))
+        listOf(DnsClientEngine.CottenDns, DnsClientEngine.StormDns).forEach { engine ->
+            val toml = render(
+                cottenProfile(cotten = CottenDnsProfileSettings(backgroundScanParallelism = 1))
+                    .copy(engine = engine),
+            )
+            assertTrue(
+                "$engine initial scan was not the shared value",
+                toml.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"),
+            )
+        }
     }
 
+    /** The background sweep is CottenDNS-only and defaults to one resolver. */
     @Test
-    fun scanParallelismHonoursTheUserValueAndStaysClamped() {
-        val tuned = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 12)))
-        assertTrue(tuned.contains("MTU_TEST_PARALLELISM_RESOLVERS = 12"))
+    fun backgroundScanParallelismIsCottenDnsOnly() {
+        val cotten = render(cottenProfile())
+        assertTrue(cotten.contains("MTU_BACKGROUND_PARALLELISM = 1"))
 
-        // 1 is allowed but deliberate: it serializes the whole scan.
-        val tooLow = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 0)))
-        assertTrue(tooLow.contains("MTU_TEST_PARALLELISM_RESOLVERS = 1"))
-
-        val tooHigh = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 9999)))
-        assertTrue(
-            tooHigh.contains(
-                "MTU_TEST_PARALLELISM_RESOLVERS = ${CottenDnsProfileSettings.MaxScanParallelism}",
-            ),
+        val tuned = render(
+            cottenProfile(cotten = CottenDnsProfileSettings(backgroundScanParallelism = 6)),
         )
-    }
+        assertTrue(tuned.contains("MTU_BACKGROUND_PARALLELISM = 6"))
 
-    /** A CottenDNS value must never reach a StormDNS profile. */
-    @Test
-    fun cottenScanParallelismDoesNotFollowAProfileSwitchedToStormDns() {
-        val shared = WhiteDnsSettings().resolve().mtuTestParallelismResolvers
-        val toml = render(
-            cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 3))
+        val storm = render(
+            cottenProfile(cotten = CottenDnsProfileSettings(backgroundScanParallelism = 6))
                 .copy(engine = DnsClientEngine.StormDns),
         )
+        assertFalse("background key leaked to StormDNS", storm.contains("MTU_BACKGROUND_PARALLELISM"))
+    }
 
-        assertTrue(toml.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"))
-        assertFalse(toml.contains("MTU_TEST_PARALLELISM_RESOLVERS = 3"))
+    @Test
+    fun backgroundScanParallelismStaysClamped() {
+        val tooLow = render(
+            cottenProfile(cotten = CottenDnsProfileSettings(backgroundScanParallelism = 0)),
+        )
+        assertTrue(tooLow.contains("MTU_BACKGROUND_PARALLELISM = 1"))
+
+        val tooHigh = render(
+            cottenProfile(cotten = CottenDnsProfileSettings(backgroundScanParallelism = 9999)),
+        )
+        assertTrue(
+            tooHigh.contains(
+                "MTU_BACKGROUND_PARALLELISM = " +
+                    "${CottenDnsProfileSettings.MaxBackgroundScanParallelism}",
+            ),
+        )
     }
 
     /**

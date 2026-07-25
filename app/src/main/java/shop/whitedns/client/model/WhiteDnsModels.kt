@@ -68,17 +68,15 @@ data class CottenDnsProfileSettings(
     val transportMode: String = ModePreset,
     val deliveryMode: String = ModePreset,
     val qnameMode: String = ModePreset,
-    // Resolvers probed at once during this profile's *initial* MTU scan, the one
-    // that runs before the tunnel comes up. Kept fast on purpose so connecting
-    // stays quick; the engine drops the continuing background scan to a single
-    // worker by itself once Fast Connect releases.
+    // Resolvers probed at once by the FastConnect *background* sweep — the one
+    // that keeps probing the fleet after the tunnel is already carrying traffic.
+    // The initial pre-connection scan is not affected: it uses the app-wide
+    // resolver-parallelism setting, shared with StormDNS, so connecting stays
+    // fast. Defaults to a single resolver to stay out of the live tunnel's way.
     //
-    // Setting this to 1 is honoured but serializes the whole scan: the engine
-    // takes a separate single-threaded path for workerCount <= 1 that never
-    // consults the background throttle, so the initial scan slows down too.
-    //
-    // StormDNS profiles ignore this and keep the app-wide setting.
-    val scanParallelism: Int = DefaultScanParallelism,
+    // Maps to MTU_BACKGROUND_PARALLELISM, which is CottenDNS-only. Older engine
+    // builds ignore the unknown key and keep their hard-coded single worker.
+    val backgroundScanParallelism: Int = DefaultBackgroundScanParallelism,
     // Used only when the effective transport is dot/doh. A blank server name
     // means "use the profile's domain", which is what the certificate is issued
     // for, so most people never touch these.
@@ -98,7 +96,8 @@ data class CottenDnsProfileSettings(
         transportMode = normalizeChoice(transportMode, TransportModeValues),
         deliveryMode = normalizeChoice(deliveryMode, DeliveryModeValues),
         qnameMode = normalizeChoice(qnameMode, QnameModeValues),
-        scanParallelism = scanParallelism.coerceIn(MinScanParallelism, MaxScanParallelism),
+        backgroundScanParallelism = backgroundScanParallelism
+            .coerceIn(MinBackgroundScanParallelism, MaxBackgroundScanParallelism),
         resolverDoTPort = normalizePort(resolverDoTPort, "853"),
         resolverDoHPort = normalizePort(resolverDoHPort, "443"),
         resolverDoHPath = resolverDoHPath.trim().ifBlank { "/dns-query" },
@@ -109,16 +108,12 @@ data class CottenDnsProfileSettings(
         const val ServerTypeCompatibility = "compatibility"
         const val ModePreset = "preset"
 
-        /**
-         * Fast initial scan. The engine throttles the background phase to a
-         * single worker on its own, but only on the parallel code path — so
-         * this must stay above 1 for that split to happen at all.
-         */
-        const val DefaultScanParallelism = 100
-        const val MinScanParallelism = 1
+        /** Matches the engine's own MTU_BACKGROUND_PARALLELISM default. */
+        const val DefaultBackgroundScanParallelism = 1
+        const val MinBackgroundScanParallelism = 1
 
-        /** The engine bounds the worker count by the resolver count anyway. */
-        const val MaxScanParallelism = 100
+        /** The engine also caps this at the initial worker count. */
+        const val MaxBackgroundScanParallelism = 100
 
         val ConfigPresetValues = listOf("default", "speed", "survival", "tcp-survival", "master-storm")
         val TransportModeValues = listOf(ModePreset, "auto", "udp", "tcp", "dot", "doh")
@@ -163,7 +158,7 @@ fun CottenDnsProfileSettings.toJson(): JSONObject {
         .put("transportMode", n.transportMode)
         .put("deliveryMode", n.deliveryMode)
         .put("qnameMode", n.qnameMode)
-        .put("scanParallelism", n.scanParallelism)
+        .put("backgroundScanParallelism", n.backgroundScanParallelism)
         .put("resolverTlsServerName", n.resolverTlsServerName)
         .put("resolverTlsPin", n.resolverTlsPin)
         .put("resolverDoTPort", n.resolverDoTPort)
@@ -183,7 +178,10 @@ fun cottenDnsProfileSettingsFromJson(json: JSONObject?): CottenDnsProfileSetting
         transportMode = json.optString("transportMode", defaults.transportMode),
         deliveryMode = json.optString("deliveryMode", defaults.deliveryMode),
         qnameMode = json.optString("qnameMode", defaults.qnameMode),
-        scanParallelism = json.optInt("scanParallelism", defaults.scanParallelism),
+        backgroundScanParallelism = json.optInt(
+            "backgroundScanParallelism",
+            defaults.backgroundScanParallelism,
+        ),
         resolverTlsServerName = json.optString("resolverTlsServerName", defaults.resolverTlsServerName),
         resolverTlsPin = json.optString("resolverTlsPin", defaults.resolverTlsPin),
         resolverDoTPort = json.optString("resolverDoTPort", defaults.resolverDoTPort),

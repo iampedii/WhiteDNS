@@ -59,6 +59,12 @@ internal object CottenDnsSettingsRenderer {
         // such key.
         appendLine("FAST_CONNECT = true")
 
+        // Only the sweep that continues behind a live tunnel. The initial scan
+        // stays on the shared MTU_TEST_PARALLELISM_RESOLVERS so connecting is
+        // not slowed down. CottenDNS-only key; older engines ignore it and keep
+        // their hard-coded single worker.
+        appendLine("MTU_BACKGROUND_PARALLELISM = ${cotten.backgroundScanParallelism}")
+
         // Resolver-hop hardening: does not change the tunnel protocol, so both
         // server generations keep it.
         appendLine("RESOLVER_RATE_LIMIT_ENABLED = true")

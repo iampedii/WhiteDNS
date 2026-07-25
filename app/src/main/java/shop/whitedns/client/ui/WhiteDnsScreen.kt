@@ -5390,9 +5390,9 @@ private fun ConnectionProfileDialog(
                     options = localizedCottenConfigPresets(),
                     onValueChange = { cotten = cotten.copy(configPreset = it) },
                 )
-                CottenDnsScanParallelismSlider(
-                    parallelism = cotten.scanParallelism,
-                    onParallelismChange = { cotten = cotten.copy(scanParallelism = it) },
+                CottenDnsBackgroundScanSlider(
+                    parallelism = cotten.backgroundScanParallelism,
+                    onParallelismChange = { cotten = cotten.copy(backgroundScanParallelism = it) },
                 )
                 // Compatibility pins TXT/UDP/63 regardless, so the overrides
                 // below would be misleading if they stayed interactive.
@@ -9652,17 +9652,17 @@ private fun localizedDnsClientEngines(): List<Choice<String>> = listOf(
 )
 
 /**
- * CottenDNS-only resolver parallelism for this profile's MTU scan. Separate from
- * the app-wide resolver-parallelism setting, which stays with StormDNS: the two
- * engines scan very differently and must not share a value.
+ * CottenDNS-only: how many resolvers the background sweep probes at once after
+ * the tunnel is already up. The initial pre-connection scan is governed by the
+ * app-wide resolver-parallelism setting instead, so this never slows connecting.
  */
 @Composable
-private fun CottenDnsScanParallelismSlider(
+private fun CottenDnsBackgroundScanSlider(
     parallelism: Int,
     onParallelismChange: (Int) -> Unit,
 ) {
-    val min = CottenDnsProfileSettings.MinScanParallelism
-    val max = CottenDnsProfileSettings.MaxScanParallelism
+    val min = CottenDnsProfileSettings.MinBackgroundScanParallelism
+    val max = CottenDnsProfileSettings.MaxBackgroundScanParallelism
     var sliderValue by remember(parallelism) {
         mutableStateOf(parallelism.coerceIn(min, max).toFloat())
     }
