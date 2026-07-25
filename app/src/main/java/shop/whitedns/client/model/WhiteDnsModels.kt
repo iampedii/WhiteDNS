@@ -68,11 +68,16 @@ data class CottenDnsProfileSettings(
     val transportMode: String = ModePreset,
     val deliveryMode: String = ModePreset,
     val qnameMode: String = ModePreset,
-    // Resolvers probed at once during this profile's MTU scan. Defaults to 1:
-    // the CottenDNS engine already drops its background scan to a single worker
-    // after Fast Connect releases, and this keeps the opening burst just as
-    // quiet. StormDNS is untouched by this and keeps its own faster shared
-    // setting. User-tunable because 1 is deliberately conservative.
+    // Resolvers probed at once during this profile's *initial* MTU scan, the one
+    // that runs before the tunnel comes up. Kept fast on purpose so connecting
+    // stays quick; the engine drops the continuing background scan to a single
+    // worker by itself once Fast Connect releases.
+    //
+    // Setting this to 1 is honoured but serializes the whole scan: the engine
+    // takes a separate single-threaded path for workerCount <= 1 that never
+    // consults the background throttle, so the initial scan slows down too.
+    //
+    // StormDNS profiles ignore this and keep the app-wide setting.
     val scanParallelism: Int = DefaultScanParallelism,
     // Used only when the effective transport is dot/doh. A blank server name
     // means "use the profile's domain", which is what the certificate is issued
@@ -104,8 +109,12 @@ data class CottenDnsProfileSettings(
         const val ServerTypeCompatibility = "compatibility"
         const val ModePreset = "preset"
 
-        /** One resolver at a time, matching the engine's background scan. */
-        const val DefaultScanParallelism = 1
+        /**
+         * Fast initial scan. The engine throttles the background phase to a
+         * single worker on its own, but only on the parallel code path — so
+         * this must stay above 1 for that split to happen at all.
+         */
+        const val DefaultScanParallelism = 100
         const val MinScanParallelism = 1
 
         /** The engine bounds the worker count by the resolver count anyway. */

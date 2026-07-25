@@ -253,15 +253,29 @@ class StormDnsConfigRendererTest {
         assertFalse(toml.contains("leaked-pin"))
     }
 
-    /** CottenDNS defaults to a single resolver; StormDNS keeps the shared value. */
+    /**
+     * The initial scan runs before the tunnel is up, so it must stay parallel.
+     * The engine only throttles the continuing background phase to one worker on
+     * its parallel code path — a value of 1 would take the serial path instead
+     * and slow the initial scan down, so the default must stay well above 1.
+     */
+    @Test
+    fun cottenDnsKeepsTheInitialScanFastByDefault() {
+        val toml = render(cottenProfile())
+        val emitted = Regex("""MTU_TEST_PARALLELISM_RESOLVERS = (\d+)""")
+            .find(toml)!!.groupValues[1].toInt()
+
+        assertTrue("initial CottenDNS scan must not be serialized", emitted > 1)
+        assertEquals(CottenDnsProfileSettings.DefaultScanParallelism, emitted)
+    }
+
     @Test
     fun scanParallelismIsSeparatePerEngine() {
-        val settings = WhiteDnsSettings()
-        val shared = settings.resolve().mtuTestParallelismResolvers
-        assertTrue("the shared value should be the faster one", shared > 1)
+        val shared = WhiteDnsSettings().resolve().mtuTestParallelismResolvers
 
-        val cotten = render(cottenProfile())
-        assertTrue(cotten.contains("MTU_TEST_PARALLELISM_RESOLVERS = 1"))
+        // Same run, different engines, independent values.
+        val cotten = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 7)))
+        assertTrue(cotten.contains("MTU_TEST_PARALLELISM_RESOLVERS = 7"))
 
         val storm = render(cottenProfile().copy(engine = DnsClientEngine.StormDns))
         assertTrue(storm.contains("MTU_TEST_PARALLELISM_RESOLVERS = $shared"))
@@ -272,6 +286,7 @@ class StormDnsConfigRendererTest {
         val tuned = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 12)))
         assertTrue(tuned.contains("MTU_TEST_PARALLELISM_RESOLVERS = 12"))
 
+        // 1 is allowed but deliberate: it serializes the whole scan.
         val tooLow = render(cottenProfile(cotten = CottenDnsProfileSettings(scanParallelism = 0)))
         assertTrue(tooLow.contains("MTU_TEST_PARALLELISM_RESOLVERS = 1"))
 
