@@ -5379,12 +5379,6 @@ private fun ConnectionProfileDialog(
                 )
                 Spacer(modifier = Modifier.height(WhiteDnsSpacing.sm))
                 WhiteDnsDropdownField(
-                    label = WhiteDnsL10n.profileFieldServerType,
-                    value = cotten.serverType,
-                    options = localizedCottenServerTypes(),
-                    onValueChange = { cotten = cotten.copy(serverType = it) },
-                )
-                WhiteDnsDropdownField(
                     label = WhiteDnsL10n.profileFieldConfigPreset,
                     value = cotten.configPreset,
                     options = localizedCottenConfigPresets(),
@@ -9760,12 +9754,6 @@ private fun CottenDnsFeatureLine(label: String, value: String) {
         )
     }
 }
-
-@Composable
-private fun localizedCottenServerTypes(): List<Choice<String>> = listOf(
-    Choice(CottenDnsProfileSettings.ServerTypeCottenDns, WhiteDnsL10n.cottenServerTypeNative),
-    Choice(CottenDnsProfileSettings.ServerTypeCompatibility, WhiteDnsL10n.cottenServerTypeCompatibility),
-)
 
 @Composable
 private fun localizedCottenConfigPresets(): List<Choice<String>> = listOf(

@@ -157,14 +157,16 @@ class StormDnsConfigRendererTest {
         assertFalse(udp.contains("RESOLVER_TLS_SERVER_NAME"))
     }
 
-    /** A legacy server must never receive the native-only optimization suite. */
+    /**
+     * A legacy server must never receive the native-only optimization suite.
+     * Selecting the Master/Storm preset is what declares the legacy target now.
+     */
     @Test
-    fun renderClientTomlForcesTheSafeSubsetInCompatibilityMode() {
+    fun renderClientTomlForcesTheSafeSubsetForTheMasterStormPreset() {
         val toml = render(
             cottenProfile(
                 cotten = CottenDnsProfileSettings(
-                    serverType = CottenDnsProfileSettings.ServerTypeCompatibility,
-                    configPreset = "speed",
+                    configPreset = CottenDnsProfileSettings.PresetMasterStorm,
                     transportMode = "doh",
                     deliveryMode = "all",
                     qnameMode = "aggressive",
@@ -194,7 +196,7 @@ class StormDnsConfigRendererTest {
             CottenDnsProfileSettings(configPreset = "survival"),
             CottenDnsProfileSettings(configPreset = "speed", transportMode = "tcp"),
             CottenDnsProfileSettings(deliveryMode = "all", qnameMode = "aggressive"),
-            CottenDnsProfileSettings(serverType = CottenDnsProfileSettings.ServerTypeCompatibility),
+            CottenDnsProfileSettings(configPreset = CottenDnsProfileSettings.PresetMasterStorm),
         )
 
         cases.forEach { settings ->
@@ -224,7 +226,6 @@ class StormDnsConfigRendererTest {
     @Test
     fun renderClientTomlKeepsCottenDnsKeysOutOfStormDnsProfiles() {
         val loaded = CottenDnsProfileSettings(
-            serverType = CottenDnsProfileSettings.ServerTypeCompatibility,
             configPreset = "survival",
             transportMode = "doh",
             deliveryMode = "all",

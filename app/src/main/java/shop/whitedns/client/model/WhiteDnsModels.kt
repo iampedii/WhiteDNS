@@ -58,12 +58,11 @@ object ServerDomains {
  * Ignored entirely for StormDNS profiles, which have no equivalent knobs.
  *
  * "preset" on an override means "derive it from [configPreset]"; any other value
- * is an explicit user choice. [serverType] Compatibility always wins and forces
- * the legacy-safe subset, so a CottenDNS binary can still drive an older
+ * is an explicit user choice. The Master/Storm preset additionally forces the
+ * legacy-safe subset, so a CottenDNS binary can still drive an older
  * MasterDNS/StormDNS server.
  */
 data class CottenDnsProfileSettings(
-    val serverType: String = ServerTypeCottenDns,
     val configPreset: String = "default",
     val transportMode: String = ModePreset,
     val deliveryMode: String = ModePreset,
@@ -87,11 +86,15 @@ data class CottenDnsProfileSettings(
     val resolverDoHPath: String = "/dns-query",
 ) : Serializable {
 
+    /**
+     * The Master/Storm preset is the legacy target, so it alone decides whether
+     * the legacy-safe subset is forced. A separate server-type control said the
+     * same thing twice and could contradict the preset.
+     */
     val isCompatibility: Boolean
-        get() = normalizeServerType(serverType) == ServerTypeCompatibility
+        get() = normalizeConfigPreset(configPreset) == PresetMasterStorm
 
     fun normalized(): CottenDnsProfileSettings = copy(
-        serverType = normalizeServerType(serverType),
         configPreset = normalizeConfigPreset(configPreset),
         transportMode = normalizeChoice(transportMode, TransportModeValues),
         deliveryMode = normalizeChoice(deliveryMode, DeliveryModeValues),
@@ -104,9 +107,8 @@ data class CottenDnsProfileSettings(
     )
 
     companion object {
-        const val ServerTypeCottenDns = "cottendns"
-        const val ServerTypeCompatibility = "compatibility"
         const val ModePreset = "preset"
+        const val PresetMasterStorm = "master-storm"
 
         /** Matches the engine's own MTU_BACKGROUND_PARALLELISM default. */
         const val DefaultBackgroundScanParallelism = 1
@@ -119,13 +121,6 @@ data class CottenDnsProfileSettings(
         val TransportModeValues = listOf(ModePreset, "auto", "udp", "tcp", "dot", "doh")
         val DeliveryModeValues = listOf(ModePreset, "txt", "txt-cname", "txt-https", "all")
         val QnameModeValues = listOf(ModePreset, "off", "moderate", "aggressive")
-
-        fun normalizeServerType(value: String?): String {
-            return when (value?.trim()?.lowercase()) {
-                ServerTypeCompatibility, "compat", "master", "storm" -> ServerTypeCompatibility
-                else -> ServerTypeCottenDns
-            }
-        }
 
         fun normalizeConfigPreset(value: String): String {
             return when (value.trim().lowercase()) {
@@ -153,7 +148,6 @@ data class CottenDnsProfileSettings(
 fun CottenDnsProfileSettings.toJson(): JSONObject {
     val n = normalized()
     return JSONObject()
-        .put("serverType", n.serverType)
         .put("configPreset", n.configPreset)
         .put("transportMode", n.transportMode)
         .put("deliveryMode", n.deliveryMode)
@@ -173,7 +167,6 @@ fun cottenDnsProfileSettingsFromJson(json: JSONObject?): CottenDnsProfileSetting
         return defaults
     }
     return CottenDnsProfileSettings(
-        serverType = json.optString("serverType", defaults.serverType),
         configPreset = json.optString("configPreset", defaults.configPreset),
         transportMode = json.optString("transportMode", defaults.transportMode),
         deliveryMode = json.optString("deliveryMode", defaults.deliveryMode),

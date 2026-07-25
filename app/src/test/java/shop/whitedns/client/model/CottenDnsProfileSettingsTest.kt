@@ -40,17 +40,18 @@ class CottenDnsProfileSettingsTest {
         assertEquals("/dns-query", settings.resolverDoHPath)
     }
 
+    /** The preset is the only thing that declares a legacy target now. */
     @Test
-    fun serverTypeAliasesMapToCompatibility() {
-        assertEquals(true, CottenDnsProfileSettings(serverType = "storm").normalized().isCompatibility)
-        assertEquals(true, CottenDnsProfileSettings(serverType = "Compatibility").normalized().isCompatibility)
-        assertEquals(false, CottenDnsProfileSettings().normalized().isCompatibility)
+    fun compatibilityFollowsTheMasterStormPreset() {
+        assertEquals(true, CottenDnsProfileSettings(configPreset = "master-storm").isCompatibility)
+        assertEquals(true, CottenDnsProfileSettings(configPreset = "storm").isCompatibility)
+        assertEquals(false, CottenDnsProfileSettings().isCompatibility)
+        assertEquals(false, CottenDnsProfileSettings(configPreset = "speed").isCompatibility)
     }
 
     @Test
     fun jsonRoundTripPreservesEveryField() {
         val original = CottenDnsProfileSettings(
-            serverType = CottenDnsProfileSettings.ServerTypeCompatibility,
             configPreset = "speed",
             transportMode = "dot",
             deliveryMode = "txt-https",

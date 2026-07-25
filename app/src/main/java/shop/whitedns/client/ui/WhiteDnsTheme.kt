@@ -353,7 +353,6 @@ object WhiteDnsL10n {
     val profileEngineStormDns: String @Composable get() = LocalWhiteDnsStrings.current.profileEngineStormDns
     val profileEngineCottenDns: String @Composable get() = LocalWhiteDnsStrings.current.profileEngineCottenDns
     val profileCottenSectionTitle: String @Composable get() = LocalWhiteDnsStrings.current.profileCottenSectionTitle
-    val profileFieldServerType: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldServerType
     val profileFieldConfigPreset: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldConfigPreset
     val profileFieldTransportMode: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldTransportMode
     val profileFieldDeliveryMode: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldDeliveryMode
@@ -365,8 +364,6 @@ object WhiteDnsL10n {
     val profileFieldResolverDoHPath: String @Composable get() = LocalWhiteDnsStrings.current.profileFieldResolverDoHPath
     val profileResolverTlsServerNamePlaceholder: String @Composable get() = LocalWhiteDnsStrings.current.profileResolverTlsServerNamePlaceholder
     val profileResolverTlsPinPlaceholder: String @Composable get() = LocalWhiteDnsStrings.current.profileResolverTlsPinPlaceholder
-    val cottenServerTypeNative: String @Composable get() = LocalWhiteDnsStrings.current.cottenServerTypeNative
-    val cottenServerTypeCompatibility: String @Composable get() = LocalWhiteDnsStrings.current.cottenServerTypeCompatibility
     val cottenFromPreset: String @Composable get() = LocalWhiteDnsStrings.current.cottenFromPreset
     val cottenPresetDefault: String @Composable get() = LocalWhiteDnsStrings.current.cottenPresetDefault
     val cottenPresetSpeed: String @Composable get() = LocalWhiteDnsStrings.current.cottenPresetSpeed

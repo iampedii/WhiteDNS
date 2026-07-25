@@ -219,7 +219,6 @@ interface WhiteDnsStrings {
     val profileEngineStormDns: String
     val profileEngineCottenDns: String
     val profileCottenSectionTitle: String
-    val profileFieldServerType: String
     val profileFieldConfigPreset: String
     val profileFieldTransportMode: String
     val profileFieldDeliveryMode: String
@@ -231,8 +230,6 @@ interface WhiteDnsStrings {
     val profileFieldResolverDoHPath: String
     val profileResolverTlsServerNamePlaceholder: String
     val profileResolverTlsPinPlaceholder: String
-    val cottenServerTypeNative: String
-    val cottenServerTypeCompatibility: String
     val cottenFromPreset: String
     val cottenPresetDefault: String
     val cottenPresetSpeed: String
@@ -948,7 +945,6 @@ object EnglishStrings : WhiteDnsStrings {
     override val profileEngineStormDns = "StormDNS"
     override val profileEngineCottenDns = "CottenDNS"
     override val profileCottenSectionTitle = "COTTENDNS SETTINGS"
-    override val profileFieldServerType = "Server Type"
     override val profileFieldConfigPreset = "Preset"
     override val profileFieldTransportMode = "Transport"
     override val profileFieldDeliveryMode = "Delivery"
@@ -960,8 +956,6 @@ object EnglishStrings : WhiteDnsStrings {
     override val profileFieldResolverDoHPath = "DoH Path"
     override val profileResolverTlsServerNamePlaceholder = "Defaults to the profile domain"
     override val profileResolverTlsPinPlaceholder = "Optional SPKI pin"
-    override val cottenServerTypeNative = "CottenDNS (native)"
-    override val cottenServerTypeCompatibility = "Master / Storm DNS (compatible)"
     override val cottenFromPreset = "From preset"
     override val cottenPresetDefault = "Default"
     override val cottenPresetSpeed = "Speed"
@@ -1654,7 +1648,6 @@ object PersianStrings : WhiteDnsStrings {
     override val profileEngineStormDns = "StormDNS"
     override val profileEngineCottenDns = "CottenDNS"
     override val profileCottenSectionTitle = "تنظیمات CottenDNS"
-    override val profileFieldServerType = "نوع سرور"
     override val profileFieldConfigPreset = "پیش‌تنظیم"
     override val profileFieldTransportMode = "ترابری"
     override val profileFieldDeliveryMode = "روش تحویل"
@@ -1666,8 +1659,6 @@ object PersianStrings : WhiteDnsStrings {
     override val profileFieldResolverDoHPath = "مسیر DoH"
     override val profileResolverTlsServerNamePlaceholder = "پیش‌فرض: دامنه پروفایل"
     override val profileResolverTlsPinPlaceholder = "پین SPKI (اختیاری)"
-    override val cottenServerTypeNative = "CottenDNS (بومی)"
-    override val cottenServerTypeCompatibility = "Master / Storm DNS (سازگار)"
     override val cottenFromPreset = "از پیش‌تنظیم"
     override val cottenPresetDefault = "پیش‌فرض"
     override val cottenPresetSpeed = "سرعت"
