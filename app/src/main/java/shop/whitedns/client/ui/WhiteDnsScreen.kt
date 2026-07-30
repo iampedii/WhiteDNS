@@ -8067,7 +8067,7 @@ private fun ConnectionInfoCard(
             InfoRow(label = WhiteDnsL10n.infoLabelAuth, value = if (socksAuthEnabled) WhiteDnsL10n.infoLabelAuthOn else WhiteDnsL10n.infoLabelAuthOff)
             if (socksAuthEnabled) {
                 InfoRow(label = WhiteDnsL10n.infoLabelUser, value = username)
-                InfoRow(label = WhiteDnsL10n.infoLabelPass, value = password)
+                InfoRow(label = WhiteDnsL10n.infoLabelPass, value = maskSecretForDisplay(password))
             }
         } else {
             ProtocolRow(protocol = protocol, showDivider = true)
@@ -8630,7 +8630,7 @@ private fun ConnectionLogsBlock(
                             context = context,
                             label = diagnosticsClipboardLabel,
                             text = buildDiagnosticsText(context, uiState),
-                            sensitive = false,
+                            sensitive = true,
                         )
                     },
                 )
@@ -8928,7 +8928,7 @@ private fun buildDiagnosticsText(
         appendLine("Mode: ${WhiteDnsOptions.connectionModeLabel(resolvedSettings.connectionMode)}")
         appendLine("Profile: ${selectedProfile.name.ifBlank { selectedProfile.id }}")
         appendLine("Server: ${selectedProfile.customServerDomain.ifBlank { "not configured" }}")
-        appendLine("Encryption key: ${selectedProfile.customServerEncryptionKey.ifBlank { "not configured" }}")
+        appendLine("Encryption key: ${redactSecretForDiagnostics(selectedProfile.customServerEncryptionKey)}")
         appendLine("Resolver profile: ${resolverProfile?.name ?: "Manual resolvers"}")
         appendLine("Resolvers: ${resolvedSettings.resolverEntries.size}")
         appendLine("Split tunnel: ${WhiteDnsOptions.splitTunnelModeLabel(resolvedSettings.splitTunnelMode)}")
