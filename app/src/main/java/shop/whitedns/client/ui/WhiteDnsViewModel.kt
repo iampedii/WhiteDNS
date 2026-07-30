@@ -1823,8 +1823,12 @@ class WhiteDnsViewModel(
             WhiteDnsScanStateStore.write(appContext, startingState)
             uiState = uiState.copy(scanState = startingState)
 
-            withContext(Dispatchers.IO) {
-                WhiteDnsScanService.startPrepared(appContext, sessionId)
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    WhiteDnsScanService.startPrepared(appContext, sessionId)
+                }
+            }.onFailure { error ->
+                setScanFailure(sessionId, "Scan start failed: ${error.message ?: error::class.java.simpleName}")
             }
         }
     }
